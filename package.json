@@ -1,0 +1,20 @@
+{
+  "name": "lighthouse-agent",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Lighthouse audit agent with dashboard - fully local",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:dashboard\"",
+    "dev:server": "npm run dev --workspace=server",
+    "dev:dashboard": "npm run dev --workspace=dashboard",
+    "start": "npm run dev",
+    "build": "npm run build --workspace=dashboard"
+  },
+  "workspaces": [
+    "server",
+    "dashboard"
+  ],
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
