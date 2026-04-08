@@ -51,9 +51,13 @@ export function ModuleManager({ modules, urls, credentials, onDataChange }: Modu
   const [editingUrlId, setEditingUrlId] = useState<string | null>(null);
   const [authMode, setAuthMode] = useState<'none' | 'saved' | 'custom'>('none');
   
-  // URL form state
+  // URL form state (for adding new URLs)
   const [newUrlValue, setNewUrlValue] = useState('');
   const [newUrlName, setNewUrlName] = useState('');
+  
+  // Editing URL state (for editing existing URLs)
+  const [editingUrlValue, setEditingUrlValue] = useState('');
+  const [editingUrlName, setEditingUrlName] = useState('');
   const [selectedCredentialId, setSelectedCredentialId] = useState<string>('');
   const [newAuthUrl, setNewAuthUrl] = useState('');
   const [newAuthUsername, setNewAuthUsername] = useState('');
@@ -99,6 +103,8 @@ export function ModuleManager({ modules, urls, credentials, onDataChange }: Modu
   const resetUrlForm = () => {
     setNewUrlValue('');
     setNewUrlName('');
+    setEditingUrlValue('');
+    setEditingUrlName('');
     setSelectedCredentialId('');
     setNewAuthUrl('');
     setNewAuthUsername('');
@@ -187,12 +193,18 @@ export function ModuleManager({ modules, urls, credentials, onDataChange }: Modu
     }
   };
 
-  const handleUpdateUrlAuth = async (urlId: string) => {
+  const handleUpdateUrl = async (urlId: string) => {
     try {
       setLoading(true);
       
+      // Base update with name (URL cannot be changed as it's unique identifier)
+      const baseUpdate: Record<string, unknown> = {
+        name: editingUrlName.trim() || null,
+      };
+      
       if (authMode === 'none') {
         await updateUrl(urlId, {
+          ...baseUpdate,
           credential_id: null,
           auth_url: null,
           auth_username: null,
@@ -203,6 +215,7 @@ export function ModuleManager({ modules, urls, credentials, onDataChange }: Modu
         });
       } else if (authMode === 'saved') {
         await updateUrl(urlId, {
+          ...baseUpdate,
           credential_id: selectedCredentialId || null,
           auth_url: null,
           auth_username: null,
@@ -213,6 +226,7 @@ export function ModuleManager({ modules, urls, credentials, onDataChange }: Modu
         });
       } else {
         await updateUrl(urlId, {
+          ...baseUpdate,
           credential_id: null,
           auth_url: newAuthUrl.trim() || null,
           auth_username: newAuthUsername.trim() || null,
@@ -226,7 +240,7 @@ export function ModuleManager({ modules, urls, credentials, onDataChange }: Modu
       resetUrlForm();
       onDataChange();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update credentials');
+      setError(err instanceof Error ? err.message : 'Failed to update URL');
     } finally {
       setLoading(false);
     }
@@ -252,8 +266,10 @@ export function ModuleManager({ modules, urls, credentials, onDataChange }: Modu
     }
   };
 
-  const startEditingCredentials = (url: Url) => {
+  const startEditingUrl = (url: Url) => {
     setEditingUrlId(url.id);
+    setEditingUrlName(url.name || '');
+    setEditingUrlValue(url.url);
     
     if (url.credential_id) {
       setAuthMode('saved');
@@ -269,7 +285,7 @@ export function ModuleManager({ modules, urls, credentials, onDataChange }: Modu
     } else {
       setAuthMode('none');
     }
-    setShowAdvanced(true);
+    setShowAdvanced(false);
   };
 
   const getCredentialName = (credId: string | null) => {
@@ -457,11 +473,10 @@ export function ModuleManager({ modules, urls, credentials, onDataChange }: Modu
                                 </div>
                               </div>
                               <div className="flex items-center gap-2">
-                                <span className="text-xs text-gray-500 px-2 py-0.5 bg-gray-100 rounded">{url.schedule}</span>
                                 <button
-                                  onClick={() => startEditingCredentials(url)}
+                                  onClick={() => startEditingUrl(url)}
                                   className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded"
-                                  title="Configure credentials"
+                                  title="Edit URL settings"
                                 >
                                   <Settings className="w-4 h-4" />
                                 </button>
@@ -480,14 +495,27 @@ export function ModuleManager({ modules, urls, credentials, onDataChange }: Modu
                               </div>
                             </div>
                             
-                            {/* Edit Credentials Form */}
+                            {/* Edit URL Form */}
                             {editingUrlId === url.id && (
                               <div className="px-6 py-4 pl-14 bg-gray-50 border-t border-gray-200">
                                 <h4 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
-                                  <Key className="w-4 h-4 text-purple-600" />
-                                  Authentication Settings
+                                  <Settings className="w-4 h-4 text-blue-600" />
+                                  Edit URL Settings
                                 </h4>
                                 <div className="space-y-4">
+                                  {/* Name Field */}
+                                  <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Display Name</label>
+                                    <input
+                                      type="text"
+                                      value={editingUrlName}
+                                      onChange={(e) => setEditingUrlName(e.target.value)}
+                                      placeholder="e.g., Homepage, Product List"
+                                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    />
+                                    <p className="text-xs text-gray-500 mt-1">URL: {url.url}</p>
+                                  </div>
+
                                   {/* Auth Mode Selector */}
                                   <div className="flex gap-2">
                                     <button
@@ -612,11 +640,11 @@ export function ModuleManager({ modules, urls, credentials, onDataChange }: Modu
                                   
                                   <div className="flex gap-2">
                                     <button
-                                      onClick={() => handleUpdateUrlAuth(url.id)}
+                                      onClick={() => handleUpdateUrl(url.id)}
                                       disabled={loading}
                                       className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
                                     >
-                                      Save Settings
+                                      Save Changes
                                     </button>
                                     <button
                                       onClick={resetUrlForm}

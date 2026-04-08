@@ -195,13 +195,12 @@ app.post('/api/urls', (req, res) => {
 
 app.patch('/api/urls/:id', (req, res) => {
   const { id } = req.params;
-  const { name, schedule, is_active, credential_id, auth_url, auth_username, auth_password, auth_username_selector, auth_password_selector, auth_submit_selector } = req.body;
+  const { name, is_active, credential_id, auth_url, auth_username, auth_password, auth_username_selector, auth_password_selector, auth_submit_selector } = req.body;
   
   const updates: string[] = [];
   const values: unknown[] = [];
   
   if (name !== undefined) { updates.push('name = ?'); values.push(name); }
-  if (schedule !== undefined) { updates.push('schedule = ?'); values.push(schedule); }
   if (is_active !== undefined) { updates.push('is_active = ?'); values.push(is_active ? 1 : 0); }
   if (credential_id !== undefined) { updates.push('credential_id = ?'); values.push(credential_id || null); }
   if (auth_url !== undefined) { updates.push('auth_url = ?'); values.push(auth_url || null); }
@@ -359,17 +358,29 @@ app.post('/api/audit/run', async (req, res) => {
     return res.status(409).json({ error: 'An audit is already in progress' });
   }
   
-  // Get URL(s) to audit
+  // Get URL(s) to audit - only active URLs in active modules
   let urls: UrlRecord[];
   if (url_id) {
-    // Single URL
-    urls = db.prepare('SELECT * FROM urls WHERE id = ? AND is_active = 1').all(url_id) as UrlRecord[];
+    // Single URL - check both URL and its module are active
+    urls = db.prepare(`
+      SELECT u.* FROM urls u
+      LEFT JOIN modules m ON u.module_id = m.id
+      WHERE u.id = ? AND u.is_active = 1 AND (m.is_active = 1 OR m.id IS NULL)
+    `).all(url_id) as UrlRecord[];
   } else if (module_id) {
-    // All URLs in a module
+    // All URLs in a module - check module is active
+    const module = db.prepare('SELECT is_active FROM modules WHERE id = ?').get(module_id) as { is_active: number } | undefined;
+    if (!module || !module.is_active) {
+      return res.status(400).json({ error: 'Module is disabled' });
+    }
     urls = db.prepare('SELECT * FROM urls WHERE module_id = ? AND is_active = 1').all(module_id) as UrlRecord[];
   } else {
-    // All URLs
-    urls = db.prepare('SELECT * FROM urls WHERE is_active = 1').all() as UrlRecord[];
+    // All URLs - only from active modules
+    urls = db.prepare(`
+      SELECT u.* FROM urls u
+      LEFT JOIN modules m ON u.module_id = m.id
+      WHERE u.is_active = 1 AND (m.is_active = 1 OR m.id IS NULL)
+    `).all() as UrlRecord[];
   }
   
   if (urls.length === 0) {

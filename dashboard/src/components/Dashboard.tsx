@@ -77,6 +77,10 @@ export function Dashboard({ modules, urls, audits, onRefresh }: DashboardProps) 
     return urls.filter((u) => u.module_id === selectedModuleId);
   }, [urls, selectedModuleId]);
 
+  const activeModuleUrls = useMemo(() => {
+    return moduleUrls.filter((u) => u.is_active);
+  }, [moduleUrls]);
+
   const selectedUrl = selectedUrlId 
     ? urls.find((u) => u.id === selectedUrlId) 
     : moduleUrls[0];
@@ -202,12 +206,14 @@ export function Dashboard({ modules, urls, audits, onRefresh }: DashboardProps) 
             urlId={selectedUrl?.id}
             moduleName={selectedUrl?.name || selectedUrl?.url}
             onAuditComplete={onRefresh}
+            disabled={!selectedUrl?.is_active || !selectedModule?.is_active}
           />
-          {moduleUrls.length > 1 && (
+          {activeModuleUrls.length > 1 && (
             <RunAuditButton 
               moduleId={selectedModuleId || undefined}
-              moduleName={`All ${moduleUrls.length} URLs`}
+              moduleName={`All ${activeModuleUrls.length} URLs`}
               onAuditComplete={onRefresh}
+              disabled={!selectedModule?.is_active}
             />
           )}
           <button

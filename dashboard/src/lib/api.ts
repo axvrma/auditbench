@@ -14,7 +14,6 @@ export interface Url {
   module_id: string | null;
   url: string;
   name: string | null;
-  schedule: string;
   is_active: boolean;
   credential_id: string | null;
   auth_url: string | null;
