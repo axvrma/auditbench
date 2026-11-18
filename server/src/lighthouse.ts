@@ -1,16 +1,16 @@
 import lighthouse, { Flags } from 'lighthouse';
 import * as chromeLauncher from 'chrome-launcher';
 import puppeteer, { Browser } from 'puppeteer-core';
-import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
+import { screenshotsDirectory } from './paths.js';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const screenshotsDir = path.join(__dirname, '..', 'screenshots');
+let browserLaunch: Promise<chromeLauncher.LaunchedChrome> | undefined;
 
-// Ensure screenshots directory exists
-if (!fs.existsSync(screenshotsDir)) {
-  fs.mkdirSync(screenshotsDir, { recursive: true });
+export async function stopAuditBrowser(): Promise<void> {
+  const launch = browserLaunch;
+  browserLaunch = undefined;
+  const chrome = await launch?.catch(() => undefined);
+  await chrome?.kill();
 }
 
 export interface AuditResult {
@@ -48,22 +48,29 @@ export interface AuthConfig {
 }
 
 export async function runLighthouseAudit(url: string, auditId: string, auth?: AuthConfig): Promise<AuditResult> {
-  let chrome: chromeLauncher.LaunchedChrome | null = null;
   let browser: Browser | null = null;
 
   try {
     console.log(`Launching Chrome for ${url}...`);
     
     // Launch Chrome with chrome-launcher (same as Lighthouse uses internally)
-    chrome = await chromeLauncher.launch({
+    const { LIGHTHOUSE_DESKTOP_TOKEN: desktopToken, ...chromeEnvironment } = process.env;
+    browserLaunch = chromeLauncher.launch({
+      envVars: chromeEnvironment,
       chromeFlags: [
         '--headless=new',
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
+        ...(desktopToken ? [] : ['--no-sandbox', '--disable-setuid-sandbox']),
         '--disable-dev-shm-usage',
         '--disable-gpu',
       ],
+    }).catch((error: unknown) => {
+      if (desktopToken && error instanceof Error && 'code' in error &&
+        (error.code === 'ERR_LAUNCHER_PATH_NOT_SET' || error.code === 'ERR_LAUNCHER_NOT_INSTALLED')) {
+        throw new Error('Google Chrome is required to run audits. Install Chrome, then try again.');
+      }
+      throw error;
     });
+    const chrome = await browserLaunch;
 
     const port = chrome.port;
     console.log(`Chrome launched on port ${port}`);
@@ -115,7 +122,7 @@ export async function runLighthouseAudit(url: string, auditId: string, auth?: Au
     await page.goto(url, { waitUntil: 'networkidle2', timeout: 60000 });
     
     const screenshotFilename = `${auditId}.png`;
-    screenshotPath = path.join(screenshotsDir, screenshotFilename);
+    screenshotPath = path.join(screenshotsDirectory, screenshotFilename);
     await page.screenshot({ 
       path: screenshotPath,
       fullPage: true,
@@ -256,8 +263,6 @@ export async function runLighthouseAudit(url: string, auditId: string, auth?: Au
       }
     }
     // Kill Chrome process
-    if (chrome) {
-      await chrome.kill();
-    }
+    await stopAuditBrowser();
   }
 }

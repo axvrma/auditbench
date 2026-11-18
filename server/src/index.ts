@@ -1,11 +1,8 @@
 import express from 'express';
 import cors from 'cors';
-import path from 'path';
-import { fileURLToPath } from 'url';
 import { db, generateId } from './db.js';
-import { runLighthouseAudit, type AuthConfig } from './lighthouse.js';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+import { runLighthouseAudit, stopAuditBrowser, type AuthConfig } from './lighthouse.js';
+import { screenshotsDirectory } from './paths.js';
 
 // Database record types
 interface ModuleRecord {
@@ -60,13 +57,32 @@ interface CredentialRecord {
   created_at: string;
 }
 const app = express();
-const PORT = 4001;
+const desktopToken = process.env.LIGHTHOUSE_DESKTOP_TOKEN;
+let shuttingDown = false;
 
-app.use(cors());
+if (desktopToken) {
+  db.prepare("UPDATE audits SET status = 'failed', error_message = ? WHERE status = 'running'")
+    .run('The app closed before this audit finished.');
+
+  app.use((req, res, next) => {
+    if (req.get('X-Lighthouse-Session') !== desktopToken) {
+      res.sendStatus(403);
+      return;
+    }
+
+    res.set('Cache-Control', 'no-store');
+    res.set('Content-Security-Policy', "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; object-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'");
+    res.set('X-Content-Type-Options', 'nosniff');
+    next();
+  });
+} else {
+  app.use(cors());
+}
+
 app.use(express.json());
 
 // Serve screenshots
-app.use('/screenshots', express.static(path.join(__dirname, '..', 'screenshots')));
+app.use('/screenshots', express.static(screenshotsDirectory));
 
 // ============ MODULES ============
 
@@ -354,6 +370,9 @@ let auditProgress = {
 app.post('/api/audit/run', async (req, res) => {
   const { url_id, module_id } = req.body;
   
+  if (shuttingDown) {
+    return res.sendStatus(503);
+  }
   if (auditProgress.inProgress) {
     return res.status(409).json({ error: 'An audit is already in progress' });
   }
@@ -409,7 +428,7 @@ app.post('/api/audit/run', async (req, res) => {
   });
   
   // Process audits
-  for (let i = 0; i < urls.length; i++) {
+  for (let i = 0; i < urls.length && !shuttingDown; i++) {
     const urlRecord = urls[i];
     
     // Update progress with current URL immediately
@@ -553,15 +572,12 @@ app.get('/api/audit/status', (_req, res) => {
   });
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`\n🚀 Lighthouse Server running at http://localhost:${PORT}`);
-  console.log('\nAPI Endpoints:');
-  console.log('  GET  /api/modules');
-  console.log('  POST /api/modules');
-  console.log('  GET  /api/urls');
-  console.log('  POST /api/urls');
-  console.log('  GET  /api/audits');
-  console.log('  POST /api/audit/run');
-  console.log('');
-});
+export function startServer(port: number, dashboardDirectory?: string) {
+  if (dashboardDirectory) app.use(express.static(dashboardDirectory));
+  return app.listen(port, '127.0.0.1');
+}
+
+export async function stopAudits() {
+  shuttingDown = true;
+  await stopAuditBrowser();
+}

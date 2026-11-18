@@ -56,7 +56,6 @@ export function ModuleManager({ modules, urls, credentials, onDataChange }: Modu
   const [newUrlName, setNewUrlName] = useState('');
   
   // Editing URL state (for editing existing URLs)
-  const [editingUrlValue, setEditingUrlValue] = useState('');
   const [editingUrlName, setEditingUrlName] = useState('');
   const [selectedCredentialId, setSelectedCredentialId] = useState<string>('');
   const [newAuthUrl, setNewAuthUrl] = useState('');
@@ -103,7 +102,6 @@ export function ModuleManager({ modules, urls, credentials, onDataChange }: Modu
   const resetUrlForm = () => {
     setNewUrlValue('');
     setNewUrlName('');
-    setEditingUrlValue('');
     setEditingUrlName('');
     setSelectedCredentialId('');
     setNewAuthUrl('');
@@ -269,7 +267,6 @@ export function ModuleManager({ modules, urls, credentials, onDataChange }: Modu
   const startEditingUrl = (url: Url) => {
     setEditingUrlId(url.id);
     setEditingUrlName(url.name || '');
-    setEditingUrlValue(url.url);
     
     if (url.credential_id) {
       setAuthMode('saved');

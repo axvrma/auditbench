@@ -1,6 +1,14 @@
 # Lighthouse Audit Agent
 
-A fully local Lighthouse performance auditing tool with a modern dashboard. Run audits on any URL, track scores over time, and get actionable suggestions.
+A desktop app for running Lighthouse audits locally. Group URLs, audit pages behind a login, capture screenshots, and track scores over time.
+
+## Install the desktop app
+
+Get the installer for your operating system from [GitHub Releases](https://github.com/axvrma/lighthouse-agent/releases). Releases target macOS (Apple Silicon and Intel), Windows x64, and Linux x64. Install Google Chrome before running an audit. You can set `CHROME_PATH` to use a specific Chrome or Chromium executable.
+
+Audit history and screenshots live in the `audits` subdirectory of the app's [per-user data directory](https://www.electronjs.org/docs/latest/api/app#appgetpathname). On macOS, that is `~/Library/Application Support/Lighthouse Agent/audits`. Existing developer data can be moved by copying `server/data.db` and `server/screenshots/` into this directory while both apps are closed.
+
+The initial macOS installers are ad-hoc signed and not notarized. The Windows installer is unsigned. Your operating system may require approval to launch them.
 
 ## Features
 
@@ -11,17 +19,24 @@ A fully local Lighthouse performance auditing tool with a modern dashboard. Run 
 - **Suggestions**: Actionable improvement recommendations with estimated savings
 - **Score History**: Track score trends over time with charts
 
-## Quick Start
+## Development
+
+Use Node.js 24 and install Google Chrome.
 
 ```bash
-# Install dependencies
-npm install
-
-# Start the app (runs both server and dashboard)
-npm run dev
+npm ci
+npm start             # Build and run the Electron app
+npm run dev            # Run the API and Vite development server
+npm run package:desktop  # Build an installer for the current platform
 ```
 
-Open http://localhost:5173 in your browser.
+Open http://localhost:5173 for browser development. If you switch to standalone Node.js development after an Electron build, run `npm rebuild better-sqlite3` so the native module matches Node.js.
+
+### Release and landing page
+
+- Installers are written to `release/`. The [desktop release workflow](.github/workflows/release.yml) builds installers on GitHub Actions and publishes them when a `v*` tag matches the version in the root `package.json`. For example, use `git tag v1.1.0` and `git push origin v1.1.0` for package version `1.1.0`.
+- The landing page is buildless HTML and CSS in `landing/`. Import this repository in Netlify with `main` as the production branch. The root `netlify.toml` sets `landing` as the base directory and publishes that directory without a build command.
+- Preview the landing page locally with `python3 -m http.server 4173 --bind 127.0.0.1 --directory landing`.
 
 ## Architecture
 

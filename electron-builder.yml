@@ -1,0 +1,20 @@
+appId: com.axvrma.lighthouse-agent
+productName: Lighthouse Agent
+icon: desktop/icon.png
+artifactName: Lighthouse-Agent-${version}-${os}-${arch}.${ext}
+directories:
+  output: release
+files:
+  - desktop/main.mjs
+  - server/dist/**/*.js
+  - dashboard/dist/**/*
+asarUnpack:
+  - '**/*.node'
+mac:
+  target: dmg
+  identity: '-'
+win:
+  target: nsis
+linux:
+  target: AppImage
+  category: Development

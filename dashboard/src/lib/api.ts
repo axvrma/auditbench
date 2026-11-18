@@ -1,4 +1,4 @@
-const API_BASE = 'http://localhost:4001/api';
+const API_BASE = '/api';
 
 export interface Module {
   id: string;
@@ -232,6 +232,5 @@ export async function getFullReport(auditId: string): Promise<object> {
 
 // Screenshot URL helper
 export function getScreenshotUrl(path: string | null): string | null {
-  if (!path) return null;
-  return `http://localhost:4001${path}`;
+  return path || null;
 }

@@ -1,5 +1,7 @@
 node_modules/
 dist/
+release/
+.netlify/
 .env
 .env.local
 .env.*.local

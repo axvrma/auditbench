@@ -1,20 +1,36 @@
 {
   "name": "lighthouse-agent",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
-  "description": "Lighthouse audit agent with dashboard - fully local",
+  "type": "module",
+  "description": "A local desktop dashboard for Lighthouse audits",
+  "author": "Axvrma",
+  "license": "MIT",
+  "main": "desktop/main.mjs",
+  "engines": { "node": ">=24" },
   "scripts": {
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:dashboard\"",
     "dev:server": "npm run dev --workspace=server",
     "dev:dashboard": "npm run dev --workspace=dashboard",
-    "start": "npm run dev",
-    "build": "npm run build --workspace=dashboard"
+    "start": "npm run build && electron-builder install-app-deps && electron .",
+    "build": "npm run build --workspace=server && npm run build --workspace=dashboard",
+    "package:desktop": "npm run build && electron-builder --publish never"
   },
   "workspaces": [
     "server",
     "dashboard"
   ],
+  "dependencies": {
+    "better-sqlite3": "13.2.0",
+    "chrome-launcher": "1.2.1",
+    "cors": "^2.8.5",
+    "express": "^4.22.1",
+    "lighthouse": "12.8.2",
+    "puppeteer-core": "24.40.0"
+  },
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "concurrently": "^8.2.2",
+    "electron": "45.3.4",
+    "electron-builder": "26.18.1"
   }
 }
