@@ -4,11 +4,11 @@ A desktop app for running Lighthouse audits locally. Group URLs, audit pages beh
 
 ## Install the desktop app
 
-Get the installer for your operating system from [GitHub Releases](https://github.com/axvrma/lighthouse-agent/releases). Releases target macOS (Apple Silicon and Intel), Windows x64, and Linux x64. Install Google Chrome before running an audit. You can set `CHROME_PATH` to use a specific Chrome or Chromium executable.
+Get the download for your operating system from [GitHub Releases](https://github.com/axvrma/lighthouse-agent/releases). Releases target macOS (Apple Silicon and Intel), Windows x64, and Linux x64. For the Windows portable ZIP, extract the entire archive and open `Lighthouse Agent.exe`. Install Google Chrome before running an audit. You can set `CHROME_PATH` to use a specific Chrome or Chromium executable.
 
 Audit history and screenshots live in the `audits` subdirectory of the app's [per-user data directory](https://www.electronjs.org/docs/latest/api/app#appgetpathname). On macOS, that is `~/Library/Application Support/Lighthouse Agent/audits`. Existing developer data can be moved by copying `server/data.db` and `server/screenshots/` into this directory while both apps are closed.
 
-The initial macOS installers are ad-hoc signed and not notarized. The Windows installer is unsigned. Your operating system may require approval to launch them.
+The initial macOS installers are ad-hoc signed and not notarized. The Windows build is unsigned. Your operating system may require approval to launch them.
 
 ## Features
 
