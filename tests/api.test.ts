@@ -237,10 +237,13 @@ test("migration backs up legacy data, encrypts credentials and URL passwords, re
     file.startsWith("pre-encryption-"),
   )!;
   assert.ok(backup);
-  assert.equal(
-    statSync(path.join(process.env.LIGHTHOUSE_DATA_DIR!, backup)).mode & 0o777,
-    0o600,
-  );
+  // Windows file access follows user ACLs; POSIX mode bits cannot express them.
+  if (process.platform !== "win32")
+    assert.equal(
+      statSync(path.join(process.env.LIGHTHOUSE_DATA_DIR!, backup)).mode &
+        0o777,
+      0o600,
+    );
   assert.equal(
     await decryptSecret(
       (

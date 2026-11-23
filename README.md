@@ -20,9 +20,9 @@ The overview calculates each category average from one latest completed run per 
 
 ## Install
 
-Download the appropriate asset from [GitHub Releases](https://github.com/axvrma/lighthouse-agent/releases): macOS Apple Silicon or Intel DMG, Windows x64, or Linux x64 AppImage. Source builds are branded Auditbench; existing published downloads may still use the previous name. **Google Chrome is required**; a custom Chrome/Chromium executable can be selected in Settings.
+Download the appropriate asset from [GitHub Releases](https://github.com/axvrma/auditbench/releases/latest): macOS Apple Silicon or Intel DMG, Windows x64, or Linux x64 AppImage. Auditbench 2.0.0 is the first release under the new name. **Google Chrome is required**; a custom Chrome/Chromium executable can be selected in Settings.
 
-The current v1.1.0 Windows download is portable ZIP: extract the entire archive and open the contained application. Future builds also produce an NSIS installer. On macOS, open the DMG and copy Auditbench into Applications. On Linux, make the AppImage executable and launch it; your distribution may require FUSE support.
+Windows releases provide a guided NSIS installer and a portable ZIP. For the ZIP, extract the entire archive before opening the application. On macOS, open the DMG and copy Auditbench into Applications. On Linux, make the AppImage executable and launch it; your distribution may require FUSE support.
 
 Current installers are unsigned and macOS builds are not notarized. Check the source and release notes before responding to operating-system security prompts. Supported platform packaging is maintained in CI; actual verification in this change is limited to the macOS arm64 host described in [verification](docs/verification.md).
 
@@ -99,4 +99,4 @@ See [deployment](docs/deployment.md), [architecture review](docs/architecture-re
 - **Database cannot open:** close the app, preserve a copy of the data directory and inspect filesystem permissions or restore a known-good backup. The app never deletes a corrupted database to hide the error.
 - **Downloads unavailable:** open official GitHub Releases; API rate limiting does not disable that fallback.
 
-[Abhishek Verma](https://axvrma.com). [Source](https://github.com/axvrma/lighthouse-agent) · [Releases](https://github.com/axvrma/lighthouse-agent/releases).
+[Abhishek Verma](https://axvrma.com). [Source](https://github.com/axvrma/auditbench) · [Releases](https://github.com/axvrma/auditbench/releases/latest).

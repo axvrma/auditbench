@@ -129,7 +129,7 @@ try {
   for (const link of await page.$$eval("[data-platform]", (links) =>
     links.map((a) => a.href),
   ))
-    assert.equal(link, "https://github.com/axvrma/lighthouse-agent/releases");
+    assert.equal(link, "https://github.com/axvrma/auditbench/releases/latest");
   assert.deepEqual(errors, []);
   await browser.close();
   browser = undefined;

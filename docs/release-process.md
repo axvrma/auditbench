@@ -1,6 +1,6 @@
 # Desktop release process
 
-This implementation leaves the product version at 1.1.0. No tag was pushed and no public release was created.
+The release target is Auditbench 2.0.0 (`v2.0.0`). The root package version, tag and packaged application version must match.
 
 ## Commands
 

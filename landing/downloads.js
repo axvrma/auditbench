@@ -1,4 +1,4 @@
-const releases = "https://github.com/axvrma/lighthouse-agent/releases";
+const releases = "https://github.com/axvrma/auditbench/releases/latest";
 const menu = document.querySelector(".menu-toggle");
 const navigation = document.querySelector("#navigation");
 menu?.addEventListener("click", () => {
@@ -15,7 +15,7 @@ navigation?.addEventListener("click", (event) => {
 async function loadDownloads() {
   try {
     const response = await fetch(
-      "https://api.github.com/repos/axvrma/lighthouse-agent/releases/latest",
+      "https://api.github.com/repos/axvrma/auditbench/releases/latest",
       {
         signal: AbortSignal.timeout(7000),
         headers: { Accept: "application/vnd.github+json" },
@@ -52,7 +52,7 @@ async function loadDownloads() {
         if (
           target.origin !== "https://github.com" ||
           !target.pathname.startsWith(
-            "/axvrma/lighthouse-agent/releases/download/",
+            "/axvrma/auditbench/releases/download/",
           )
         )
           continue;

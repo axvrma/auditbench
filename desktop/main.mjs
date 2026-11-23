@@ -259,7 +259,7 @@ async function start() {
             label: "GitHub releases",
             click: () =>
               shell.openExternal(
-                "https://github.com/axvrma/lighthouse-agent/releases",
+                "https://github.com/axvrma/auditbench/releases/latest",
               ),
           },
           {

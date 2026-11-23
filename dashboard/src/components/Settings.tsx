@@ -113,14 +113,14 @@ export default function Settings({
           engineering teams.
         </p>
         <a
-          href="https://github.com/axvrma/lighthouse-agent"
+          href="https://github.com/axvrma/auditbench"
           target="_blank"
           rel="noreferrer"
         >
           Source on GitHub <ExternalLink size={14} />
         </a>
         <a
-          href="https://github.com/axvrma/lighthouse-agent/releases"
+          href="https://github.com/axvrma/auditbench/releases/latest"
           target="_blank"
           rel="noreferrer"
         >
