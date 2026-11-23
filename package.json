@@ -1,20 +1,36 @@
 {
-  "name": "lighthouse-agent",
+  "name": "auditbench",
   "version": "1.1.0",
   "private": true,
   "type": "module",
-  "description": "A local desktop dashboard for Lighthouse audits",
-  "author": "Axvrma",
+  "description": "Auditbench \u2014 a local-first performance intelligence workspace",
+  "author": {
+    "name": "Abhishek Verma",
+    "url": "https://axvrma.com"
+  },
   "license": "MIT",
   "main": "desktop/main.mjs",
-  "engines": { "node": ">=24" },
+  "engines": {
+    "node": ">=24"
+  },
   "scripts": {
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:dashboard\"",
-    "dev:server": "npm run dev --workspace=server",
+    "dev:server": "npm run rebuild:node && npm run dev --workspace=server",
     "dev:dashboard": "npm run dev --workspace=dashboard",
     "start": "npm run build && electron-builder install-app-deps && electron .",
-    "build": "npm run build --workspace=server && npm run build --workspace=dashboard",
-    "package:desktop": "npm run build && electron-builder --publish never"
+    "build": "npm run build --workspace=server && npm run build --workspace=dashboard && npm run build:landing",
+    "package:desktop": "npm run build && electron-builder install-app-deps && electron-builder --publish never",
+    "test": "node --import tsx --test tests/*.test.ts",
+    "typecheck": "npm run typecheck --workspace=dashboard && tsc --noEmit --project server/tsconfig.json",
+    "build:landing": "node scripts/build-landing.mjs",
+    "test:browser": "node scripts/browser-smoke.mjs",
+    "rebuild:node": "npm rebuild better-sqlite3",
+    "rebuild:desktop": "electron-builder install-app-deps",
+    "test:desktop": "npm run build && npm run rebuild:desktop && node scripts/desktop-smoke.mjs",
+    "pretest": "npm run rebuild:node",
+    "pretest:browser": "npm run rebuild:node",
+    "test:landing": "node scripts/landing-smoke.mjs",
+    "test:ui": "npm run rebuild:node && node scripts/ui-states.mjs"
   },
   "workspaces": [
     "server",
@@ -23,7 +39,6 @@
   "dependencies": {
     "better-sqlite3": "13.2.0",
     "chrome-launcher": "1.2.1",
-    "cors": "^2.8.5",
     "express": "^4.22.1",
     "lighthouse": "12.8.2",
     "puppeteer-core": "24.40.0"

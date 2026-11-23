@@ -1,20 +1,30 @@
 appId: com.axvrma.lighthouse-agent
-productName: Lighthouse Agent
+productName: Auditbench
 icon: desktop/icon.png
-artifactName: Lighthouse-Agent-${version}-${os}-${arch}.${ext}
+artifactName: Auditbench-${version}-${os}-${arch}.${ext}
 directories:
   output: release
 files:
   - desktop/main.mjs
+  - desktop/icon.png
   - server/dist/**/*.js
   - dashboard/dist/**/*
 asarUnpack:
-  - '**/*.node'
+  - "**/*.node"
 mac:
+  icon: desktop/icon.icns
+  category: public.app-category.developer-tools
   target: dmg
-  identity: '-'
+  identity: "-"
 win:
-  target: nsis
+  icon: desktop/icon.ico
+  target: [nsis, zip]
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  installerIcon: desktop/icon.ico
+  uninstallerIcon: desktop/icon.ico
 linux:
+  icon: desktop/icon.png
   target: AppImage
   category: Development

@@ -1,96 +1,361 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Run Lighthouse audits on your desktop. Track scores, capture screenshots, and audit pages behind a login.">
-  <meta name="theme-color" content="#101b19">
-  <title>Lighthouse Agent — Local Lighthouse audits</title>
-  <link rel="icon" href="assets/lighthouse.svg" type="image/svg+xml">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-  <header class="site-header">
-    <div class="shell header-content">
-      <a class="wordmark" href="#" aria-label="Lighthouse Agent home"><span class="brand-icon" aria-hidden="true"></span>Lighthouse Agent</a>
-      <nav aria-label="Main navigation">
-        <a class="nav-feature" href="#features">Features</a>
-        <a class="nav-source" href="https://github.com/axvrma/lighthouse-agent">GitHub <span aria-hidden="true">↗</span></a>
-        <a class="nav-download" href="#download">Download <span aria-hidden="true">↓</span></a>
-      </nav>
-    </div>
-  </header>
-
-  <main>
-    <section class="hero" aria-labelledby="hero-title">
-      <div class="shell hero-layout">
-        <img class="hero-image" src="assets/lighthouse-coast.jpg" alt="" width="1536" height="1024" fetchpriority="high">
-        <div class="hero-copy">
-          <p class="eyebrow hero-label"><span aria-hidden="true"></span> Open-source desktop auditor</p>
-          <h1 id="hero-title">See what slows<br class="desktop-break"> your site down.</h1>
-          <p class="hero-description">Run Lighthouse audits from your desktop. Track how your pages perform over time, including the ones behind a login.</p>
-          <a class="button button-light" href="#download">Get Lighthouse Agent <span aria-hidden="true">↓</span></a>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Understand your website’s performance. Run Lighthouse audits locally, compare real score history, and know what to fix from a focused desktop workspace."
+    />
+    <meta name="theme-color" content="#101b19" />
+    <title>Auditbench — Website performance, without the guesswork.</title>
+    <meta property="og:type" content="website" />
+    <meta
+      property="og:title"
+      content="Auditbench — A clearer view of your web."
+    />
+    <meta
+      property="og:description"
+      content="Local Lighthouse audits. Measured progress. Actionable findings. A focused, open-source desktop workspace."
+    />
+    <meta property="og:image" content="/assets/social.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" href="/assets/lighthouse.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/assets/fonts/fonts.css" />
+    <link rel="stylesheet" href="/styles.css" />
+    <script src="/downloads.js" defer></script>
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+    <header class="site-header">
+      <div class="shell nav-row">
+        <a class="wordmark" href="#" aria-label="Auditbench home"
+          ><img
+            src="/assets/lighthouse.svg"
+            width="32"
+            height="32"
+            alt=""
+          />Auditbench</a
+        ><button
+          class="menu-toggle"
+          aria-expanded="false"
+          aria-controls="navigation"
+        >
+          Menu
+        </button>
+        <nav id="navigation" aria-label="Main navigation">
+          <a href="#features">Features</a><a href="#workflow">How it works</a
+          ><a href="#download">Downloads</a
+          ><a
+            href="https://github.com/axvrma/lighthouse-agent"
+            target="_blank"
+            rel="noopener noreferrer"
+            >GitHub</a
+          ><a class="button small mint" href="#download">Get the desktop app</a>
+        </nav>
+      </div>
+    </header>
+    <main id="main">
+      <section class="hero">
+        <div class="shell">
+          <div class="hero-copy">
+            <p class="eyebrow">
+              <span class="live-dot"></span> OPEN SOURCE. ON YOUR DEVICE.
+            </p>
+            <h1>Website performance,<br /><em>without the guesswork.</em></h1>
+            <p class="hero-description">
+              Understand your website’s performance. Track what changed.<br
+                class="desktop"
+              />
+              Know what to fix — from one focused desktop workspace.
+            </p>
+            <div class="hero-actions">
+              <a class="button mint" href="#download">Download Auditbench</a
+              ><a class="button ghost" href="#features"
+                >Explore the workspace</a
+              >
+            </div>
+            <p class="hero-note">
+              macOS · Windows · Linux <span>Google Chrome required</span>
+            </p>
+          </div>
+          <figure class="product-window">
+            <div class="window-bar">
+              <div class="window-controls" aria-hidden="true">
+                <i></i><i></i><i></i>
+              </div>
+              <span>Auditbench / Personal workspace</span
+              ><span>LOCAL FIRST</span>
+            </div>
+            <img
+              src="/assets/workspace.webp"
+              alt="Auditbench overview showing real local audit results, four Lighthouse categories, and performance trends"
+              width="1440"
+              height="1040"
+              fetchpriority="high"
+            />
+            <figcaption>
+              Actual application · Audits of a local preview · Scores vary by
+              page and device
+            </figcaption>
+          </figure>
+        </div>
+      </section>
+      <div class="principles">
+        <div class="shell">
+          <span>POWERED BY LIGHTHOUSE</span><span>YOUR DATA, YOUR DEVICE</span
+          ><span>NO ACCOUNT REQUIRED</span><span>OPEN-SOURCE BY DESIGN</span>
         </div>
       </div>
-    </section>
-
-    <section class="overview shell" id="features" aria-labelledby="features-title">
-      <div class="overview-copy">
-        <p class="eyebrow">The audit workflow</p>
-        <h2 id="features-title">Find what changed between runs.</h2>
-        <p>Group related URLs into modules. Run a single page or the whole group, then review scores, screenshots, and Lighthouse recommendations together.</p>
-      </div>
-      <figure class="sample">
-        <figcaption><span>Audit results</span><span class="eyebrow">Sample audit</span></figcaption>
-        <div class="sample-address"><span aria-hidden="true">◆</span> example.com/checkout</div>
-        <dl class="sample-scores">
-          <div><dt>Performance</dt><dd>84</dd></div>
-          <div><dt>Accessibility</dt><dd>98</dd></div>
-          <div><dt>Best practices</dt><dd>100</dd></div>
-          <div><dt>SEO</dt><dd>92</dd></div>
-        </dl>
-        <div class="sample-suggestion"><span aria-hidden="true">↳</span> Reduce unused JavaScript</div>
-      </figure>
-    </section>
-
-    <section class="details shell" aria-label="More features">
-      <article>
-        <h3>Audit signed-in pages</h3>
-        <p>Save login details for staging sites and other pages that require authentication.</p>
-      </article>
-      <article>
-        <h3>See what the browser saw</h3>
-        <p>Each run captures a full-page screenshot alongside the Lighthouse report.</p>
-      </article>
-      <article>
-        <h3>Keep your audit history local</h3>
-        <p>Reports, screenshots, and score history are stored on your device.</p>
-      </article>
-    </section>
-
-    <section class="download" id="download" aria-labelledby="download-title">
-      <div class="shell download-layout">
+      <section class="section shell" id="features">
+        <div class="section-intro">
+          <p class="eyebrow">FROM SIGNAL TO UNDERSTANDING</p>
+          <h2>Every run tells a story.<br />See the whole picture.</h2>
+          <p>
+            A score is a starting point. Connect the numbers to the page, the
+            history, and the technical work that moves your site forward.
+          </p>
+        </div>
+        <div class="feature-showcase">
+          <div class="feature-copy">
+            <span class="feature-symbol" aria-hidden="true">◎</span>
+            <h3>A workspace for your web.</h3>
+            <p>
+              Organize production, staging, and signed-in pages into modules.
+              Run one website or an entire project, and follow each audit as it
+              finishes.
+            </p>
+            <ul>
+              <li>Four supported Lighthouse scoring categories</li>
+              <li>Saved authentication for authorized websites</li>
+              <li>Visible progress, failures, and captured pages</li>
+            </ul>
+          </div>
+          <figure class="detail-window">
+            <img
+              src="/assets/modules.webp"
+              alt="Real module management interface with website authentication status and audit actions"
+              width="1200"
+              height="820"
+              loading="lazy"
+            />
+            <figcaption>
+              Organize sites into practical project modules.
+            </figcaption>
+          </figure>
+        </div>
+        <div class="report-showcase">
+          <figure class="detail-window">
+            <img
+              src="/assets/audit-details.webp"
+              alt="Actual audit detail dialog with previous-run changes and Lighthouse recommendations grouped by category"
+              width="1440"
+              height="1040"
+              loading="lazy"
+            />
+            <figcaption>Inspect the evidence behind every score.</figcaption>
+          </figure>
+          <div class="feature-copy">
+            <span class="feature-symbol" aria-hidden="true">⌕</span>
+            <h3>Go beyond the headline score.</h3>
+            <p>
+              Open any run from your searchable audit history. Compare it with
+              the previous result, inspect the captured page, and read the
+              original Lighthouse findings.
+            </p>
+            <p class="detail-note">
+              Savings appear only when Lighthouse provides an estimate. Full
+              JSON reports remain available for deeper investigation.
+            </p>
+          </div>
+        </div>
+        <div class="feature-grid">
+          <article>
+            <span class="feature-symbol" aria-hidden="true">◷</span>
+            <h3>Measured progress.</h3>
+            <p>
+              Compare category scores across real runs. Find regressions with
+              exact timestamps and previous-run changes.
+            </p>
+          </article>
+          <article>
+            <span class="feature-symbol" aria-hidden="true">⌕</span>
+            <h3>Know what to fix.</h3>
+            <p>
+              Explore Lighthouse findings by category. See estimated savings
+              when supplied, then inspect the full diagnostic report.
+            </p>
+          </article>
+          <article>
+            <span class="feature-symbol" aria-hidden="true">▣</span>
+            <h3>Keep the evidence.</h3>
+            <p>
+              A screenshot, the report, and your history stay together locally.
+              Return to the details whenever you need them.
+            </p>
+          </article>
+          <article>
+            <span class="feature-symbol" aria-hidden="true">◇</span>
+            <h3>Your work stays yours.</h3>
+            <p>
+              SQLite stores your audit history on your device. Desktop passwords
+              use OS-backed protection when available.
+            </p>
+          </article>
+        </div>
+      </section>
+      <section class="workflow" id="workflow">
+        <div class="shell">
+          <div class="section-intro">
+            <p class="eyebrow">A SMALL ROUTINE. A CLEARER PICTURE.</p>
+            <h2>From URL to understanding.</h2>
+            <p>Use the same repeatable workflow every time you ship.</p>
+          </div>
+          <ol class="steps">
+            <li>
+              <strong>Add your websites</strong>
+              <p>Group related pages into a module.</p>
+            </li>
+            <li>
+              <strong>Configure access</strong>
+              <p>Add login details if a page requires them.</p>
+            </li>
+            <li>
+              <strong>Run a local audit</strong>
+              <p>Chrome and Lighthouse do the measuring.</p>
+            </li>
+            <li>
+              <strong>Investigate findings</strong>
+              <p>Review scores, screenshots, and diagnostics.</p>
+            </li>
+            <li>
+              <strong>Track your progress</strong>
+              <p>Compare the next run with your history.</p>
+            </li>
+          </ol>
+        </div>
+      </section>
+      <section class="section shell engineering">
         <div>
-          <p class="eyebrow">Desktop downloads</p>
-          <h2 id="download-title">Run your first audit.</h2>
-          <p>Choose your platform on GitHub Releases. Google Chrome is required to run audits.</p>
+          <p class="eyebrow">BUILT FOR THE PEOPLE WHO BUILD THE WEB</p>
+          <h2>A focused tool.<br />An open foundation.</h2>
         </div>
-        <div class="download-action">
-          <a class="button button-dark" href="https://github.com/axvrma/lighthouse-agent/releases">Browse downloads <span aria-hidden="true">↗</span></a>
-          <p>macOS (Apple Silicon and Intel) · Windows x64 · Linux x64</p>
+        <div>
+          <p>
+            Lighthouse for the measurements. Electron for the desktop. React for
+            the workspace. Node.js and SQLite for the local engine.
+          </p>
+          <p>
+            No hosted audit service. No required cloud account. The public
+            website introduces the product; the desktop app runs your audits on
+            your machine.
+          </p>
+          <a
+            class="source-link"
+            href="https://github.com/axvrma/lighthouse-agent"
+            target="_blank"
+            rel="noopener noreferrer"
+            >Explore the source on GitHub</a
+          >
+        </div>
+      </section>
+      <section class="download" id="download">
+        <div class="shell">
+          <div class="section-intro">
+            <p class="eyebrow">YOUR NEXT IMPROVEMENT STARTS HERE</p>
+            <h2>A clearer view.<br />One download away.</h2>
+            <p>
+              Choose your platform. Install Google Chrome. Run your first audit.
+            </p>
+          </div>
+          <p id="release-status" class="release-status" aria-live="polite">
+            Find the current desktop release on GitHub.
+          </p>
+          <div class="download-grid">
+            <a
+              class="download-card"
+              data-platform="mac-arm64"
+              href="https://github.com/axvrma/lighthouse-agent/releases"
+              ><span class="os-icon" aria-hidden="true">⌘</span
+              ><strong>macOS</strong><span>Apple Silicon</span
+              ><small>Browse releases</small></a
+            ><a
+              class="download-card"
+              data-platform="mac-x64"
+              href="https://github.com/axvrma/lighthouse-agent/releases"
+              ><span class="os-icon" aria-hidden="true">⌘</span
+              ><strong>macOS</strong><span>Intel</span
+              ><small>Browse releases</small></a
+            ><a
+              class="download-card"
+              data-platform="win-x64"
+              href="https://github.com/axvrma/lighthouse-agent/releases"
+              ><span class="os-icon" aria-hidden="true">⊞</span
+              ><strong>Windows</strong><span>x64</span
+              ><small>Browse releases</small></a
+            ><a
+              class="download-card"
+              data-platform="linux-x64"
+              href="https://github.com/axvrma/lighthouse-agent/releases"
+              ><span class="os-icon" aria-hidden="true">⌁</span
+              ><strong>Linux</strong><span>x64</span
+              ><small>Browse releases</small></a
+            >
+          </div>
+          <div class="download-notes">
+            <p>Earlier downloads may still use the previous product name.</p>
+            <p>
+              <strong>Google Chrome is required.</strong> You can set a custom
+              Chrome or Chromium executable in Settings.
+            </p>
+            <p>
+              Distributions are currently unsigned and macOS builds are not
+              notarized. Review the release notes and your operating system’s
+              security prompts. Windows ZIP releases are portable: extract the
+              entire archive before opening the application. New Windows
+              releases may provide an NSIS installer, labeled above when
+              available.
+            </p>
+            <a
+              href="https://github.com/axvrma/lighthouse-agent/releases"
+              target="_blank"
+              rel="noopener noreferrer"
+              >All releases and installation notes</a
+            >
+          </div>
+        </div>
+      </section>
+    </main>
+    <footer>
+      <div class="shell footer-main">
+        <a class="wordmark" href="#"
+          ><img
+            src="/assets/lighthouse.svg"
+            alt=""
+            width="32"
+            height="32"
+          />Auditbench</a
+        >
+        <p>A local-first performance intelligence workspace.</p>
+        <div>
+          <a
+            href="https://github.com/axvrma/lighthouse-agent"
+            target="_blank"
+            rel="noopener noreferrer"
+            >GitHub source</a
+          ><a
+            href="https://github.com/axvrma/lighthouse-agent/releases"
+            target="_blank"
+            rel="noopener noreferrer"
+            >Releases</a
+          ><a href="#features">Features</a>
         </div>
       </div>
-    </section>
-  </main>
-
-  <footer>
-    <div class="shell footer-content">
-      <a class="wordmark" href="#"><span class="brand-icon" aria-hidden="true"></span>Lighthouse Agent</a>
-      <a href="https://github.com/axvrma/lighthouse-agent">View source on GitHub <span aria-hidden="true">↗</span></a>
-    </div>
-  </footer>
-</body>
+      <div class="shell footer-bottom">
+        <a href="https://axvrma.com" target="_blank" rel="noopener noreferrer"
+          >Abhishek Verma</a
+        ><span>Independent software. Open source. Local first.</span>
+      </div>
+    </footer>
+  </body>
 </html>

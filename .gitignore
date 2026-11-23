@@ -11,3 +11,8 @@ release/
 # Local database and screenshots
 server/data.db
 server/screenshots/
+
+landing-dist/
+server/*.db*
+server/pre-encryption-*
+test-results/

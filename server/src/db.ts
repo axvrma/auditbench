@@ -1,10 +1,17 @@
-import Database, { Database as DatabaseType } from 'better-sqlite3';
-import path from 'path';
-import { dataDirectory } from './paths.js';
+import Database, { Database as DatabaseType } from "better-sqlite3";
+import path from "path";
+import { chmodSync } from "node:fs";
+import { migrateSecrets } from "./secrets.js";
+import { dataDirectory } from "./paths.js";
 
-const dbPath = path.join(dataDirectory, 'data.db');
+const dbPath = path.join(dataDirectory, "data.db");
 
 export const db: DatabaseType = new Database(dbPath);
+
+db.pragma("foreign_keys = ON");
+db.pragma("secure_delete = ON");
+db.pragma("busy_timeout = 5000");
+chmodSync(dbPath, 0o600);
 
 // Initialize database schema
 db.exec(`
@@ -78,9 +85,23 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_suggestions_audit_id ON suggestions(audit_id);
 `);
 
+db.exec(`CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+CREATE INDEX IF NOT EXISTS idx_audits_history ON audits(url_id, created_at DESC);`);
+const auditColumns = db.prepare("PRAGMA table_info(audits)").all() as {
+  name: string;
+}[];
+if (!auditColumns.some((column) => column.name === "audit_profile"))
+  db.exec("ALTER TABLE audits ADD COLUMN audit_profile TEXT");
+if (!auditColumns.some((column) => column.name === "completed_at"))
+  db.exec("ALTER TABLE audits ADD COLUMN completed_at TEXT");
+export const migrationNotice = await migrateSecrets(db);
+db.prepare(
+  "UPDATE audits SET status = 'failed', error_message = 'The engine stopped before this audit finished.' WHERE status = 'running'",
+).run();
+
 // Helper to generate UUIDs
 export function generateId(): string {
   return crypto.randomUUID();
 }
 
-console.log('Database initialized at:', dbPath);
+console.log("Database initialized at:", dbPath);
