@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from "react";
 import {
   LineChart,
   Line,
@@ -6,88 +6,130 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
-} from 'recharts';
-import { getAuditHistory } from '../lib/api';
-import { format } from 'date-fns';
-
-interface ScoreChartProps {
-  urlId: string;
-}
-
-interface ChartData {
-  date: string;
-  fullDate: string;
-  performance: number | null;
-  accessibility: number | null;
-  bestPractices: number | null;
-  seo: number | null;
-}
-
-export function ScoreChart({ urlId }: ScoreChartProps) {
-  const [data, setData] = useState<ChartData[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const loadHistory = async () => {
-      try {
-        setLoading(true);
-        const audits = await getAuditHistory(urlId);
-        
-        const chartData: ChartData[] = audits.map((audit) => ({
-          date: format(new Date(audit.created_at), 'MMM d'),
-          fullDate: format(new Date(audit.created_at), 'PPp'),
-          performance: audit.performance_score,
-          accessibility: audit.accessibility_score,
-          bestPractices: audit.best_practices_score,
-          seo: audit.seo_score,
-        }));
-        setData(chartData);
-      } catch (error) {
-        console.error('Failed to load audit history:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadHistory();
-  }, [urlId]);
-
-  if (loading) {
-    return (
-      <div className="h-64 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
-
-  if (data.length < 2) {
-    return (
-      <div className="h-64 flex items-center justify-center text-gray-500">
-        Not enough data for chart (need at least 2 audits)
-      </div>
-    );
-  }
-
+} from "recharts";
+import type { Audit } from "../lib/api";
+import { categories } from "./ScoreCards";
+import { Empty, timestamp } from "./ui";
+export function ScoreChart({
+  audits,
+  onSelect,
+}: {
+  audits: Audit[];
+  onSelect: (audit: Audit) => void;
+}) {
+  const [category, setCategory] = useState("all");
+  const data = [...audits]
+    .filter((a) => a.status === "completed")
+    .reverse()
+    .slice(-1000);
   return (
-    <div className="h-64">
-      <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={data}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-          <XAxis dataKey="date" tick={{ fontSize: 12, fill: '#6b7280' }} tickLine={false} />
-          <YAxis domain={[0, 100]} tick={{ fontSize: 12, fill: '#6b7280' }} tickLine={false} axisLine={false} />
-          <Tooltip
-            contentStyle={{ backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '8px' }}
-            labelFormatter={(_, payload) => payload?.[0]?.payload?.fullDate || ''}
-          />
-          <Legend wrapperStyle={{ paddingTop: '16px' }} iconType="circle" iconSize={8} />
-          <Line type="monotone" dataKey="performance" name="Performance" stroke="#22c55e" strokeWidth={2} dot={{ fill: '#22c55e', r: 3 }} />
-          <Line type="monotone" dataKey="accessibility" name="Accessibility" stroke="#3b82f6" strokeWidth={2} dot={{ fill: '#3b82f6', r: 3 }} />
-          <Line type="monotone" dataKey="bestPractices" name="Best Practices" stroke="#a855f7" strokeWidth={2} dot={{ fill: '#a855f7', r: 3 }} />
-          <Line type="monotone" dataKey="seo" name="SEO" stroke="#f97316" strokeWidth={2} dot={{ fill: '#f97316', r: 3 }} />
-        </LineChart>
-      </ResponsiveContainer>
-    </div>
+    <section className="panel trends">
+      <header>
+        <div>
+          <p className="eyebrow">THE BIGGER PICTURE</p>
+          <h2>Performance over time</h2>
+        </div>
+        <select
+          aria-label="Trend category"
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+        >
+          <option value="all">All categories</option>
+          {categories.map(([key, label]) => (
+            <option key={key} value={key}>
+              {label}
+            </option>
+          ))}
+        </select>
+      </header>
+      {data.length < 2 ? (
+        <Empty title="Your next run starts a trend">
+          Complete two audits of this website to compare measured scores.
+        </Empty>
+      ) : (
+        <>
+          <div
+            className="chart"
+            role="img"
+            aria-label="Lighthouse category scores over time. Select an audit in the history below for exact values."
+          >
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart
+                data={data}
+                onClick={(state) => {
+                  if (
+                    state?.activeTooltipIndex != null &&
+                    data[state.activeTooltipIndex]
+                  )
+                    onSelect(data[state.activeTooltipIndex]);
+                }}
+              >
+                <CartesianGrid
+                  vertical={false}
+                  stroke="var(--line)"
+                  strokeDasharray="3 4"
+                />
+                <XAxis
+                  dataKey="created_at"
+                  tickFormatter={(v) =>
+                    new Date(
+                      v.includes("T") ? v : v.replace(" ", "T") + "Z",
+                    ).toLocaleDateString(undefined, {
+                      month: "short",
+                      day: "numeric",
+                    })
+                  }
+                  tick={{ fill: "var(--muted)", fontSize: 12 }}
+                  minTickGap={40}
+                />
+                <YAxis
+                  domain={[0, 100]}
+                  tick={{ fill: "var(--muted)", fontSize: 12 }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <Tooltip
+                  labelFormatter={(value) => timestamp(String(value))}
+                  contentStyle={{
+                    background: "var(--surface)",
+                    border: "1px solid var(--line)",
+                    borderRadius: 8,
+                  }}
+                />
+                {categories
+                  .filter(([key]) => category === "all" || key === category)
+                  .map(([key, label, color]) => (
+                    <Line
+                      key={key}
+                      type="linear"
+                      dataKey={key}
+                      name={label}
+                      stroke={color}
+                      strokeWidth={2}
+                      dot={{ r: 3 }}
+                      activeDot={{ r: 5 }}
+                      connectNulls={false}
+                      isAnimationActive={false}
+                    />
+                  ))}
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="chart-legend">
+            {categories.map(([key, label, color]) => (
+              <button
+                key={key}
+                aria-pressed={category === key}
+                onClick={() => setCategory(category === key ? "all" : key)}
+              >
+                <i style={{ background: color }} />
+                {label}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </section>
   );
 }

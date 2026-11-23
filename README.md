@@ -1,119 +1,102 @@
-# Lighthouse Audit Agent
+# Auditbench
 
-A desktop app for running Lighthouse audits locally. Group URLs, audit pages behind a login, capture screenshots, and track scores over time.
+A local-first performance intelligence workspace for developers and engineering teams. Understand your website's performance, track what changed, and know what to fix.
 
-## Install the desktop app
+![Auditbench workspace](landing/assets/workspace.webp)
 
-Get the download for your operating system from [GitHub Releases](https://github.com/axvrma/lighthouse-agent/releases). Releases target macOS (Apple Silicon and Intel), Windows x64, and Linux x64. For the Windows portable ZIP, extract the entire archive and open `Lighthouse Agent.exe`. Install Google Chrome before running an audit. You can set `CHROME_PATH` to use a specific Chrome or Chromium executable.
+Run real Lighthouse audits from a focused Electron desktop application. Group websites into modules, audit signed-in pages, compare measured scores and investigate the original diagnostic findings. Reports, screenshots and history stay on your device.
 
-Audit history and screenshots live in the `audits` subdirectory of the app's [per-user data directory](https://www.electronjs.org/docs/latest/api/app#appgetpathname). On macOS, that is `~/Library/Application Support/Lighthouse Agent/audits`. Existing developer data can be moved by copying `server/data.db` and `server/screenshots/` into this directory while both apps are closed.
+## What you can do
 
-The initial macOS installers are ad-hoc signed and not notarized. The Windows build is unsigned. Your operating system may require approval to launch them.
+- Create, rename, color, pause and delete modules; add, edit and organize websites.
+- Audit a single page, a whole module or every active website with shared live progress.
+- Review Performance, Accessibility, Best Practices and SEO scores. Historic PWA values are preserved in the database but are not requested or presented as current Lighthouse scoring.
+- Compare real history, previous runs with matching audit profiles, exact timestamps and category trends.
+- Search, filter and sort audit history; inspect failed runs, screenshots and full Lighthouse JSON reports.
+- Save reusable or website-specific logins with OS-backed password protection in the desktop app.
+- Choose light, dark or system appearance and configure a Chrome executable in Settings.
 
-## Features
+The overview calculates each category average from one latest completed run per website, excluding missing measurements. Counts and averages query the full database. The history workspace loads the newest 10,000 records and charts show up to 1,000 observed points; older records remain in SQLite. Performance below 90 in any supported category or a failed latest attempt marks a website as needing attention. Synthetic Lighthouse lab scores are not real-user monitoring.
 
-- **Module Organization**: Group URLs into modules (e.g., "E-Commerce", "Marketing")
-- **Lighthouse Audits**: Performance, Accessibility, Best Practices, SEO, PWA scores
-- **Authentication Support**: Add login credentials for pages behind auth
-- **Screenshots**: Automatic full-page screenshots of each audit
-- **Suggestions**: Actionable improvement recommendations with estimated savings
-- **Score History**: Track score trends over time with charts
+## Install
 
-## Development
+Download the appropriate asset from [GitHub Releases](https://github.com/axvrma/lighthouse-agent/releases): macOS Apple Silicon or Intel DMG, Windows x64, or Linux x64 AppImage. Source builds are branded Auditbench; existing published downloads may still use the previous name. **Google Chrome is required**; a custom Chrome/Chromium executable can be selected in Settings.
 
-Use Node.js 24 and install Google Chrome.
+The current v1.1.0 Windows download is portable ZIP: extract the entire archive and open the contained application. Future builds also produce an NSIS installer. On macOS, open the DMG and copy Auditbench into Applications. On Linux, make the AppImage executable and launch it; your distribution may require FUSE support.
 
-```bash
+Current installers are unsigned and macOS builds are not notarized. Check the source and release notes before responding to operating-system security prompts. Supported platform packaging is maintained in CI; actual verification in this change is limited to the macOS arm64 host described in [verification](docs/verification.md).
+
+## Develop
+
+Requires Node.js 24, npm and Google Chrome. Native SQLite builds may need your platform's C/C++ build tools.
+
+```sh
 npm ci
-npm start             # Build and run the Electron app
-npm run dev            # Run the API and Vite development server
-npm run package:desktop  # Build an installer for the current platform
+npm run dev
 ```
 
-Open http://localhost:5173 for browser development. If you switch to standalone Node.js development after an Electron build, run `npm rebuild better-sqlite3` so the native module matches Node.js.
+Open the Vite local URL (`http://127.0.0.1:5173`). The local API binds to `127.0.0.1:4001` and is proxied by Vite. Both servers stay local. `npm run dev` rebuilds SQLite for Node before starting the API.
 
-### Release and landing page
+For optional encrypted credential development, supply `LIGHTHOUSE_SECRET_KEY` from an external secret manager as a base64-encoded random 32-byte key. Without it, ordinary public-site audits work and secret writes remain disabled. Use an isolated `LIGHTHOUSE_DATA_DIR`; never store the key beside a database or reuse desktop production data for tests.
 
-- Installers are written to `release/`. The [desktop release workflow](.github/workflows/release.yml) builds installers on GitHub Actions and publishes them when a `v*` tag matches the version in the root `package.json`. For example, use `git tag v1.1.0` and `git push origin v1.1.0` for package version `1.1.0`.
-- The landing page is buildless HTML and CSS in `landing/`. Import this repository in Netlify with `main` as the production branch. The root `netlify.toml` sets `landing` as the base directory and publishes that directory without a build command.
-- Preview the landing page locally with `python3 -m http.server 4173 --bind 127.0.0.1 --directory landing`.
+Launch the real desktop application:
 
-## Architecture
-
-```
-┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
-│    Dashboard    │────▶│   Express API    │────▶│     SQLite      │
-│   (React/Vite)  │     │   + Lighthouse   │     │   (data.db)     │
-│   :5173         │     │   :4001          │     │                 │
-└─────────────────┘     └──────────────────┘     └─────────────────┘
+```sh
+npm start
 ```
 
-## Project Structure
+Build and package without publishing:
 
-```
-lighthouse-agent/
-├── server/               # Backend API
-│   ├── src/
-│   │   ├── index.ts      # Express server (port 4001)
-│   │   ├── db.ts         # SQLite database
-│   │   └── lighthouse.ts # Audit runner with auth support
-│   ├── data.db           # SQLite database (auto-created)
-│   └── screenshots/      # Captured screenshots
-├── dashboard/            # Frontend
-│   └── src/
-│       ├── App.tsx
-│       ├── components/   # React components
-│       └── lib/api.ts    # API client
-└── package.json
+```sh
+npm run build
+npm run package:desktop
 ```
 
-## Usage
+The builder rebuilds native modules for the selected Electron runtime. See [release process](docs/release-process.md) for cross-platform commands, signing and the artifact matrix.
 
-### 1. Create a Module
+## Verify
 
-Click "Modules" tab → Enter module name → "Create Module"
+```sh
+npm run typecheck
+npm test
+npm run test:ui
+npm run test:browser
+npm run test:landing
+npm run test:desktop
+```
 
-### 2. Add URLs
+Browser scripts default to the normal Chrome application path on macOS; configure `CHROME_PATH` for another installed executable. They use temporary databases and real local fixture pages. `npm test` covers API CRUD, validation, secret redaction/migration, locked storage, restart recovery, failed audit status, scoring, screenshot references, download resolution and Netlify output. Browser checks cover real authenticated/single/batch audits, UI state/error recovery, themes, dialogs and responsive marketing layouts. Actual results and untested environments are in [verification](docs/verification.md).
 
-Expand a module → "Add URL to this module" → Enter URL
+## Architecture and local data
 
-### 3. Add Authentication (Optional)
+- `dashboard/`: React, strict TypeScript, Vite, Lucide and Recharts. One shared workspace provider owns audit polling and completion refresh.
+- `server/`: Express, SQLite, Lighthouse and Puppeteer. HTTP(S) audit targets, controlled validation, persistent reports and one sequential audit queue.
+- `desktop/main.mjs`: sandboxed Electron window, random loopback server, private session token, OS secret protection and native lifecycle/menu handling.
+- `landing/`: separate lightweight static product website. Netlify never runs the local engine.
 
-For pages requiring login:
-- Click the ⚙️ icon next to a URL
-- Enter login credentials
-- The agent will authenticate before running audits
+Desktop data stays under Electron's per-user `userData/audits` directory, retaining the existing v1.1.0 location. Browser development defaults to server/data.db and server/screenshots. `LIGHTHOUSE_DATA_DIR` can explicitly select a different directory. Back up the entire directory with the application closed. Upgrades never replace the database; interrupted runs become visible failures and completed history remains intact.
 
-### 4. Run Audits
+Existing plaintext passwords are converted only when secure storage is available, after creating an owner-only SQLite recovery backup. **That backup contains plaintext secrets.** A migration notice identifies it; remove it after verifying your saved logins. Unavailable OS storage locks authentication rather than falling back to plaintext. Encrypted passwords depend on the original OS key store. Read [security and migration](docs/security.md) before moving credential data between machines.
 
-Click "Run Audit" button → Results appear automatically
+## Public website and Netlify
 
-## API Endpoints
+Netlify uses the committed netlify.toml to prepare and publish only landing-dist, including production and pull-request previews. Set SITE_URL for a custom canonical domain; Netlify's URL variables are otherwise used to generate SEO metadata, robots and sitemap files. Downloads resolve actual GitHub release assets and fall back to the official releases page. No paid Netlify service or backend is required.
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/modules` | List all modules |
-| POST | `/api/modules` | Create a module |
-| GET | `/api/urls` | List all URLs |
-| POST | `/api/urls` | Add a URL |
-| POST | `/api/audit/run` | Trigger audit |
-| GET | `/api/audits` | List audit results |
+```sh
+SITE_URL=https://your-domain.example npm run build:landing
+python3 -m http.server 8080 --bind 127.0.0.1 --directory landing-dist
+```
 
-## Database
+See [deployment](docs/deployment.md), [architecture review](docs/architecture-review.md), [Electron architecture](docs/electron-architecture.md) and [design system](docs/design-system.md).
 
-SQLite database stored at `server/data.db` with tables:
-- `modules` - URL groups
-- `urls` - URLs with optional auth credentials
-- `audits` - Lighthouse results
-- `suggestions` - Improvement recommendations
+## Troubleshooting
 
-## Tech Stack
+- **Chrome missing:** install Chrome, then use Settings to select the actual executable (inside the app bundle on macOS).
+- **Native module ABI mismatch:** `npm run rebuild:node` for development/tests; `npm run rebuild:desktop` for Electron. Do not rebuild both concurrently.
+- **Authentication failed:** verify the login URL and selectors. MFA, captchas and arbitrary external SSO flows require manual investigation; the app fails conservatively instead of silently auditing a login page.
+- **Secrets locked:** unlock the OS store and use the original application/user profile. Re-enter passwords if the original key store is lost. Linux `basic_text` protection is rejected.
+- **Interrupted audit:** restart the engine; the attempt appears as failed and can be rerun.
+- **Database cannot open:** close the app, preserve a copy of the data directory and inspect filesystem permissions or restore a known-good backup. The app never deletes a corrupted database to hide the error.
+- **Downloads unavailable:** open official GitHub Releases; API rate limiting does not disable that fallback.
 
-- **Frontend**: React, Vite, TypeScript, Tailwind CSS, Recharts
-- **Backend**: Node.js, Express, TypeScript
-- **Database**: SQLite (better-sqlite3)
-- **Auditing**: Lighthouse, Puppeteer
-
-## License
-
-MIT
+[Abhishek Verma](https://axvrma.com). [Source](https://github.com/axvrma/lighthouse-agent) · [Releases](https://github.com/axvrma/lighthouse-agent/releases).

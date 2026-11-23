@@ -1,4 +1,4 @@
-const API_BASE = '/api';
+const API_BASE = "/api";
 
 export interface Module {
   id: string;
@@ -18,7 +18,8 @@ export interface Url {
   credential_id: string | null;
   auth_url: string | null;
   auth_username: string | null;
-  auth_password: string | null;
+  auth_password?: string | null;
+  has_password: boolean;
   auth_username_selector: string | null;
   auth_password_selector: string | null;
   auth_submit_selector: string | null;
@@ -30,7 +31,7 @@ export interface Credential {
   name: string;
   auth_url: string | null;
   username: string;
-  password: string;
+  has_password: boolean;
   username_selector: string | null;
   password_selector: string | null;
   submit_selector: string | null;
@@ -38,6 +39,8 @@ export interface Credential {
 }
 
 export interface Audit {
+  audit_profile?: string | null;
+  completed_at?: string | null;
   id: string;
   url_id: string;
   performance_score: number | null;
@@ -47,6 +50,7 @@ export interface Audit {
   pwa_score: number | null;
   screenshot_path: string | null;
   status: string;
+  has_report?: boolean;
   error_message: string | null;
   created_at: string;
 }
@@ -63,49 +67,60 @@ export interface Suggestion {
   savings_bytes: number;
 }
 
-async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> {
+async function fetchApi<T>(
+  endpoint: string,
+  options?: RequestInit,
+): Promise<T> {
   const res = await fetch(`${API_BASE}${endpoint}`, {
     ...options,
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
+      "X-Lighthouse-Client": "workspace",
       ...options?.headers,
     },
   });
-  
+
   if (!res.ok) {
-    const error = await res.json().catch(() => ({ error: 'Request failed' }));
+    const error = await res.json().catch(() => ({ error: "Request failed" }));
     throw new Error(error.error || `HTTP ${res.status}`);
   }
-  
+
   return res.json();
 }
 
 // Modules
 export async function getModules(): Promise<Module[]> {
-  return fetchApi<Module[]>('/modules');
+  return fetchApi<Module[]>("/modules");
 }
 
-export async function addModule(name: string, description?: string, color?: string): Promise<Module> {
-  return fetchApi<Module>('/modules', {
-    method: 'POST',
+export async function addModule(
+  name: string,
+  description?: string,
+  color?: string,
+): Promise<Module> {
+  return fetchApi<Module>("/modules", {
+    method: "POST",
     body: JSON.stringify({ name, description, color }),
   });
 }
 
-export async function updateModule(id: string, updates: Partial<Module>): Promise<Module> {
+export async function updateModule(
+  id: string,
+  updates: Partial<Module>,
+): Promise<Module> {
   return fetchApi<Module>(`/modules/${id}`, {
-    method: 'PATCH',
+    method: "PATCH",
     body: JSON.stringify(updates),
   });
 }
 
 export async function deleteModule(id: string): Promise<void> {
-  await fetchApi(`/modules/${id}`, { method: 'DELETE' });
+  await fetchApi(`/modules/${id}`, { method: "DELETE" });
 }
 
 // Credentials
 export async function getCredentials(): Promise<Credential[]> {
-  return fetchApi<Credential[]>('/credentials');
+  return fetchApi<Credential[]>("/credentials");
 }
 
 export interface AddCredentialParams {
@@ -118,27 +133,32 @@ export interface AddCredentialParams {
   submit_selector?: string;
 }
 
-export async function addCredential(params: AddCredentialParams): Promise<Credential> {
-  return fetchApi<Credential>('/credentials', {
-    method: 'POST',
+export async function addCredential(
+  params: AddCredentialParams,
+): Promise<Credential> {
+  return fetchApi<Credential>("/credentials", {
+    method: "POST",
     body: JSON.stringify(params),
   });
 }
 
-export async function updateCredential(id: string, updates: Partial<AddCredentialParams>): Promise<Credential> {
+export async function updateCredential(
+  id: string,
+  updates: Partial<AddCredentialParams>,
+): Promise<Credential> {
   return fetchApi<Credential>(`/credentials/${id}`, {
-    method: 'PATCH',
+    method: "PATCH",
     body: JSON.stringify(updates),
   });
 }
 
 export async function deleteCredential(id: string): Promise<void> {
-  await fetchApi(`/credentials/${id}`, { method: 'DELETE' });
+  await fetchApi(`/credentials/${id}`, { method: "DELETE" });
 }
 
 // URLs
 export async function getUrls(): Promise<Url[]> {
-  return fetchApi<Url[]>('/urls');
+  return fetchApi<Url[]>("/urls");
 }
 
 export interface AddUrlParams {
@@ -155,31 +175,34 @@ export interface AddUrlParams {
 }
 
 export async function addUrl(params: AddUrlParams): Promise<Url> {
-  return fetchApi<Url>('/urls', {
-    method: 'POST',
+  return fetchApi<Url>("/urls", {
+    method: "POST",
     body: JSON.stringify(params),
   });
 }
 
-export async function updateUrl(id: string, updates: Partial<Url>): Promise<Url> {
+export async function updateUrl(
+  id: string,
+  updates: Partial<Url>,
+): Promise<Url> {
   return fetchApi<Url>(`/urls/${id}`, {
-    method: 'PATCH',
+    method: "PATCH",
     body: JSON.stringify(updates),
   });
 }
 
 export async function deleteUrl(id: string): Promise<void> {
-  await fetchApi(`/urls/${id}`, { method: 'DELETE' });
+  await fetchApi(`/urls/${id}`, { method: "DELETE" });
 }
 
 // Audits
 export async function getAudits(urlId?: string): Promise<Audit[]> {
-  const query = urlId ? `?url_id=${urlId}` : '';
+  const query = urlId ? `?url_id=${urlId}` : "";
   return fetchApi<Audit[]>(`/audits${query}`);
 }
 
 export async function getLatestAudits(): Promise<(Audit & { url: Url })[]> {
-  return fetchApi<(Audit & { url: Url })[]>('/audits/latest');
+  return fetchApi<(Audit & { url: Url })[]>("/audits/latest");
 }
 
 export async function getAuditHistory(urlId: string): Promise<Audit[]> {
@@ -191,9 +214,12 @@ export async function getSuggestions(auditId: string): Promise<Suggestion[]> {
 }
 
 // Run Audit
-export async function runAudit(urlId?: string, moduleId?: string): Promise<{ message: string; urls: string[] }> {
-  return fetchApi('/audit/run', {
-    method: 'POST',
+export async function runAudit(
+  urlId?: string,
+  moduleId?: string,
+): Promise<{ message: string; urls: string[] }> {
+  return fetchApi("/audit/run", {
+    method: "POST",
     body: JSON.stringify({ url_id: urlId, module_id: moduleId }),
   });
 }
@@ -202,7 +228,7 @@ export interface UrlProgress {
   id: string;
   url: string;
   name: string;
-  status: 'pending' | 'running' | 'completed' | 'failed';
+  status: "pending" | "running" | "completed" | "failed";
   scores?: {
     performance: number | null;
     accessibility: number | null;
@@ -222,7 +248,7 @@ export interface AuditStatus {
 }
 
 export async function getAuditStatus(): Promise<AuditStatus> {
-  return fetchApi<AuditStatus>('/audit/status');
+  return fetchApi<AuditStatus>("/audit/status");
 }
 
 // Get full Lighthouse report
@@ -234,3 +260,44 @@ export async function getFullReport(auditId: string): Promise<object> {
 export function getScreenshotUrl(path: string | null): string | null {
   return path || null;
 }
+
+export interface UiPreferences {
+  appearance: "system" | "light" | "dark";
+  sidebarCompact: boolean;
+  activeView: string;
+  selectedWebsite: string;
+}
+export interface Settings extends UiPreferences {
+  version: string;
+  dataDirectory: string;
+  chromePath: string;
+  chromeAvailable: boolean;
+  secureStorage: boolean;
+  migrationNotice: string | null;
+  desktop: boolean;
+  auditProfile: string;
+}
+export const getSettings = () => fetchApi<Settings>("/settings");
+export const saveSettings = (chromePath: string) =>
+  fetchApi<Settings>("/settings", {
+    method: "PATCH",
+    body: JSON.stringify({ chromePath }),
+  });
+
+export interface Summary {
+  websites: number;
+  activeModules: number;
+  completed: number;
+  auditCount: number;
+  attention: number;
+  performance: number | null;
+  accessibility: number | null;
+  seo: number | null;
+}
+export const getSummary = () => fetchApi<Summary>("/summary");
+
+export const savePreferences = (preferences: Partial<UiPreferences>) =>
+  fetchApi<Settings>("/settings", {
+    method: "PATCH",
+    body: JSON.stringify(preferences),
+  });

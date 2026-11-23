@@ -1,8 +1,9 @@
-import lighthouse, { Flags } from 'lighthouse';
-import * as chromeLauncher from 'chrome-launcher';
-import puppeteer, { Browser } from 'puppeteer-core';
-import path from 'path';
-import { screenshotsDirectory } from './paths.js';
+import lighthouse, { Flags } from "lighthouse";
+import * as chromeLauncher from "chrome-launcher";
+import puppeteer, { Browser } from "puppeteer-core";
+import path from "path";
+import { getSettings } from "./settings.js";
+import { screenshotsDirectory } from "./paths.js";
 
 let browserLaunch: Promise<chromeLauncher.LaunchedChrome> | undefined;
 
@@ -11,6 +12,15 @@ export async function stopAuditBrowser(): Promise<void> {
   browserLaunch = undefined;
   const chrome = await launch?.catch(() => undefined);
   await chrome?.kill();
+}
+
+export class AuditFailure extends Error {
+  constructor(
+    message: string,
+    readonly fullReport: object,
+  ) {
+    super(message);
+  }
 }
 
 export interface AuditResult {
@@ -36,7 +46,12 @@ export interface Suggestion {
   savingsBytes: number;
 }
 
-const CATEGORIES = ['performance', 'accessibility', 'best-practices', 'seo', 'pwa'] as const;
+export const CATEGORIES = [
+  "performance",
+  "accessibility",
+  "best-practices",
+  "seo",
+] as const;
 
 export interface AuthConfig {
   authUrl?: string;
@@ -47,33 +62,58 @@ export interface AuthConfig {
   submitSelector?: string;
 }
 
-export async function runLighthouseAudit(url: string, auditId: string, auth?: AuthConfig): Promise<AuditResult> {
+export async function runLighthouseAudit(
+  url: string,
+  auditId: string,
+  auth?: AuthConfig,
+): Promise<AuditResult> {
   let browser: Browser | null = null;
+  const deadline = setTimeout(() => {
+    void stopAuditBrowser().catch(() => undefined);
+  }, 180000);
+  deadline.unref();
 
   try {
-    console.log(`Launching Chrome for ${url}...`);
-    
+    if (!getSettings().chromeAvailable)
+      throw new Error(
+        "Google Chrome is required. Install Chrome or set the executable path in Settings.",
+      );
+
     // Launch Chrome with chrome-launcher (same as Lighthouse uses internally)
-    const { LIGHTHOUSE_DESKTOP_TOKEN: desktopToken, ...chromeEnvironment } = process.env;
-    browserLaunch = chromeLauncher.launch({
-      envVars: chromeEnvironment,
-      chromeFlags: [
-        '--headless=new',
-        ...(desktopToken ? [] : ['--no-sandbox', '--disable-setuid-sandbox']),
-        '--disable-dev-shm-usage',
-        '--disable-gpu',
-      ],
-    }).catch((error: unknown) => {
-      if (desktopToken && error instanceof Error && 'code' in error &&
-        (error.code === 'ERR_LAUNCHER_PATH_NOT_SET' || error.code === 'ERR_LAUNCHER_NOT_INSTALLED')) {
-        throw new Error('Google Chrome is required to run audits. Install Chrome, then try again.');
-      }
-      throw error;
-    });
+    const {
+      LIGHTHOUSE_DESKTOP_TOKEN: desktopToken,
+      LIGHTHOUSE_SECRET_KEY: secretKey,
+      ...chromeEnvironment
+    } = process.env;
+    browserLaunch = chromeLauncher
+      .launch({
+        envVars: chromeEnvironment,
+        chromePath: getSettings().chromePath || undefined,
+        chromeFlags: [
+          "--headless=new",
+          ...(process.env.LIGHTHOUSE_NO_SANDBOX === "1"
+            ? ["--no-sandbox"]
+            : []),
+          "--disable-dev-shm-usage",
+          "--disable-gpu",
+        ],
+      })
+      .catch((error: unknown) => {
+        if (
+          error instanceof Error &&
+          "code" in error &&
+          (error.code === "ERR_LAUNCHER_PATH_NOT_SET" ||
+            error.code === "ERR_LAUNCHER_NOT_INSTALLED")
+        ) {
+          throw new Error(
+            "Google Chrome is required to run audits. Install Chrome, then try again.",
+          );
+        }
+        throw error;
+      });
     const chrome = await browserLaunch;
 
     const port = chrome.port;
-    console.log(`Chrome launched on port ${port}`);
 
     // Connect puppeteer for authentication and screenshot
     browser = await puppeteer.connect({
@@ -81,78 +121,107 @@ export async function runLighthouseAudit(url: string, auditId: string, auth?: Au
     });
 
     const page = await browser.newPage();
+    await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 1 });
     let screenshotPath: string | null = null;
-    
+
+    if (auth && (!auth.username || !auth.password))
+      throw new Error(
+        "Authentication requires both a username and a saved password.",
+      );
     // Handle authentication if credentials provided
     if (auth?.username && auth?.password) {
       const loginUrl = auth.authUrl || url;
-      console.log(`Authenticating at ${loginUrl}...`);
-      
+
       try {
-        await page.goto(loginUrl, { waitUntil: 'networkidle2', timeout: 60000 });
-        
+        await page.goto(loginUrl, {
+          waitUntil: "networkidle2",
+          timeout: 60000,
+        });
+
         // Wait for and fill username
-        const usernameSelector = auth.usernameSelector || 'input[type="email"], input[name="username"], input[name="email"], #username, #email';
+        const usernameSelector =
+          auth.usernameSelector ||
+          'input[type="email"], input[name="username"], input[name="email"], #username, #email';
         await page.waitForSelector(usernameSelector, { timeout: 10000 });
         await page.type(usernameSelector, auth.username);
-        
+
         // Fill password
-        const passwordSelector = auth.passwordSelector || 'input[type="password"], #password';
+        const passwordSelector =
+          auth.passwordSelector || 'input[type="password"], #password';
         await page.waitForSelector(passwordSelector, { timeout: 5000 });
         await page.type(passwordSelector, auth.password);
-        
+
         // Submit form
-        const submitSelector = auth.submitSelector || 'button[type="submit"], input[type="submit"]';
-        await page.click(submitSelector);
-        
-        // Wait for navigation after login
-        await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 30000 }).catch(() => {
-          console.log('Navigation timeout after login, continuing...');
-        });
-        
-        console.log('Authentication completed');
-      } catch (authError) {
-        console.warn('Authentication failed:', authError instanceof Error ? authError.message : authError);
-        console.log('Continuing without authentication...');
+        const submitSelector =
+          auth.submitSelector || 'button[type="submit"], input[type="submit"]';
+        await Promise.all([
+          page
+            .waitForNavigation({ waitUntil: "networkidle2", timeout: 15000 })
+            .catch(() => null),
+          page.click(submitSelector),
+        ]);
+        if (await page.$(passwordSelector))
+          throw new Error("The login form is still visible.");
+      } catch {
+        throw new Error(
+          "Authentication could not be verified. Check the login URL, credentials and selectors.",
+        );
       }
     }
-    
+
     // Take a screenshot
-    console.log(`Taking screenshot...`);
-    await page.goto(url, { waitUntil: 'networkidle2', timeout: 60000 });
-    
+
+    const response = await page.goto(url, {
+      waitUntil: "networkidle2",
+      timeout: 60000,
+    });
+    if (response && response.status() >= 400)
+      throw new Error(`Website returned HTTP ${response.status()}.`);
+    if (
+      auth &&
+      (await page.$(auth.passwordSelector || 'input[type="password"]'))
+    )
+      throw new Error(
+        "Authentication did not grant access to the requested page.",
+      );
+
     const screenshotFilename = `${auditId}.png`;
     screenshotPath = path.join(screenshotsDirectory, screenshotFilename);
-    await page.screenshot({ 
+    await page.screenshot({
       path: screenshotPath,
       fullPage: true,
-      type: 'png'
+      type: "png",
     });
 
     // Close page and disconnect puppeteer before Lighthouse runs
     // This prevents conflicts - Lighthouse will create its own connection
     await page.close();
-    browser.disconnect();
+    await browser.disconnect();
     browser = null;
-    
-    console.log(`Running Lighthouse audit...`);
+
     const flags: Flags = {
       port,
-      output: 'json',
-      logLevel: 'error',
+      output: "json",
+      logLevel: "error",
       onlyCategories: [...CATEGORIES],
       disableStorageReset: true, // Preserve cookies/session from authentication
     };
 
     // Config to preserve session and optimize for desktop
     const config = {
-      extends: 'lighthouse:default',
+      extends: "lighthouse:default",
       settings: {
         disableStorageReset: true,
         maxWaitForFcp: 30000,
         maxWaitForLoad: 45000,
-        formFactor: 'desktop' as const,
-        screenEmulation: { disabled: true },
+        formFactor: "desktop" as const,
+        screenEmulation: {
+          disabled: false,
+          mobile: false,
+          width: 1440,
+          height: 900,
+          deviceScaleFactor: 1,
+        },
         throttling: {
           cpuSlowdownMultiplier: 1,
           requestLatencyMs: 0,
@@ -165,48 +234,27 @@ export async function runLighthouseAudit(url: string, auditId: string, auth?: Au
     const result = await lighthouse(url, flags, config);
 
     if (!result || !result.lhr) {
-      throw new Error('Lighthouse returned no results');
+      throw new Error("Lighthouse returned no results");
     }
 
     const lhr = result.lhr;
 
-    // Debug: Check if categories exist and what's in them
-    console.log('Lighthouse run warnings:', lhr.runWarnings);
-    console.log('Available categories:', Object.keys(lhr.categories || {}));
-    
     // Check for runtime errors
     if (lhr.runtimeError) {
-      console.error('Lighthouse runtime error:', lhr.runtimeError.code, lhr.runtimeError.message);
+      throw new AuditFailure(
+        `Lighthouse could not complete: ${lhr.runtimeError.code}`,
+        lhr,
+      );
     }
-
-    // Log raw category scores for debugging
-    console.log('Raw Lighthouse scores:');
-    console.log('  Performance:', lhr.categories.performance?.score);
-    console.log('  Accessibility:', lhr.categories.accessibility?.score);
-    console.log('  Best Practices:', lhr.categories['best-practices']?.score);
-    console.log('  SEO:', lhr.categories.seo?.score);
-    console.log('  PWA:', lhr.categories.pwa?.score);
 
     // Extract scores (convert from 0-1 to 0-100)
     const scores = {
-      performance: lhr.categories.performance?.score != null 
-        ? Math.round(lhr.categories.performance.score * 100) 
-        : null,
-      accessibility: lhr.categories.accessibility?.score != null 
-        ? Math.round(lhr.categories.accessibility.score * 100) 
-        : null,
-      bestPractices: lhr.categories['best-practices']?.score != null 
-        ? Math.round(lhr.categories['best-practices'].score * 100) 
-        : null,
-      seo: lhr.categories.seo?.score != null 
-        ? Math.round(lhr.categories.seo.score * 100) 
-        : null,
-      pwa: lhr.categories.pwa?.score != null 
-        ? Math.round(lhr.categories.pwa.score * 100) 
-        : null,
+      performance: categoryScore(lhr.categories.performance?.score),
+      accessibility: categoryScore(lhr.categories.accessibility?.score),
+      bestPractices: categoryScore(lhr.categories["best-practices"]?.score),
+      seo: categoryScore(lhr.categories.seo?.score),
+      pwa: null,
     };
-    
-    console.log('Converted scores:', scores);
 
     // Extract suggestions
     const suggestions: Suggestion[] = [];
@@ -220,16 +268,18 @@ export async function runLighthouseAudit(url: string, auditId: string, auth?: Au
         if (!audit) continue;
 
         if (audit.score !== null && audit.score < 1) {
-          const numericDetails = audit.details as { 
-            overallSavingsMs?: number; 
-            overallSavingsBytes?: number;
-          } | undefined;
+          const numericDetails = audit.details as
+            | {
+                overallSavingsMs?: number;
+                overallSavingsBytes?: number;
+              }
+            | undefined;
 
           suggestions.push({
             category,
             auditRef: auditRef.id,
             title: audit.title,
-            description: audit.description || '',
+            description: audit.description || "",
             score: audit.score,
             savingsMs: numericDetails?.overallSavingsMs || 0,
             savingsBytes: numericDetails?.overallSavingsBytes || 0,
@@ -245,8 +295,6 @@ export async function runLighthouseAudit(url: string, auditId: string, auth?: Au
       return bImpact - aImpact;
     });
 
-    console.log(`Audit complete. Performance: ${scores.performance}`);
-
     return {
       scores,
       suggestions,
@@ -254,10 +302,11 @@ export async function runLighthouseAudit(url: string, auditId: string, auth?: Au
       fullReport: lhr,
     };
   } finally {
+    clearTimeout(deadline);
     // Cleanup: disconnect puppeteer if still connected
     if (browser) {
       try {
-        browser.disconnect();
+        await browser.disconnect();
       } catch {
         // Already disconnected
       }
@@ -265,4 +314,13 @@ export async function runLighthouseAudit(url: string, auditId: string, auth?: Au
     // Kill Chrome process
     await stopAuditBrowser();
   }
+}
+
+export function categoryScore(value: number | null | undefined): number | null {
+  return typeof value === "number" &&
+    Number.isFinite(value) &&
+    value >= 0 &&
+    value <= 1
+    ? Math.round(value * 100)
+    : null;
 }

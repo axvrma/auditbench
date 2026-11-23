@@ -1,186 +1,304 @@
-import { useState, useEffect } from 'react';
-import { Dashboard } from './components/Dashboard';
-import { ModuleManager } from './components/ModuleManager';
-import { CredentialManager } from './components/CredentialManager';
-import { 
-  getModules, 
-  getUrls, 
-  getLatestAudits,
-  getCredentials,
-  type Module,
-  type Url, 
-  type Audit,
-  type Credential
-} from './lib/api';
-import { LayoutGrid, BarChart3, AlertCircle, RefreshCw, Key } from 'lucide-react';
-
-type Tab = 'dashboard' | 'modules' | 'credentials';
-
-function App() {
-  const [activeTab, setActiveTab] = useState<Tab>('dashboard');
-  const [modules, setModules] = useState<Module[]>([]);
-  const [urls, setUrls] = useState<Url[]>([]);
-  const [audits, setAudits] = useState<(Audit & { url: Url })[]>([]);
-  const [credentials, setCredentials] = useState<Credential[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [serverOnline, setServerOnline] = useState(true);
-
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      setServerOnline(true);
-
-      const [modulesData, urlsData, auditsData, credentialsData] = await Promise.all([
-        getModules(),
-        getUrls(),
-        getLatestAudits(),
-        getCredentials(),
-      ]);
-      setModules(modulesData);
-      setUrls(urlsData);
-      setAudits(auditsData);
-      setCredentials(credentialsData);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to load data';
-      if (message.includes('fetch') || message.includes('network')) {
-        setServerOnline(false);
-        setError('Cannot connect to server. Make sure the server is running on port 4001.');
-      } else {
-        setError(message);
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
+import { lazy, Suspense, useEffect, useState, useRef } from "react";
+import {
+  LayoutDashboard,
+  Layers,
+  History,
+  KeyRound,
+  Settings2,
+  PanelLeftClose,
+  PanelLeftOpen,
+  RefreshCw,
+  Moon,
+  Sun,
+  Play,
+  Activity,
+  X,
+} from "lucide-react";
+import { WorkspaceProvider, useWorkspace } from "./hooks/useWorkspace";
+import { applyTheme, savedTheme, type Theme } from "./lib/theme";
+import { Dashboard } from "./components/Dashboard";
+import { type UiPreferences } from "./lib/api";
+import { ModuleManager } from "./components/ModuleManager";
+import { CredentialManager } from "./components/CredentialManager";
+import AuditHistory from "./components/AuditHistory";
+const Settings = lazy(() => import("./components/Settings"));
+const views = [
+  { id: "overview", name: "Overview", icon: LayoutDashboard },
+  { id: "modules", name: "Modules", icon: Layers },
+  { id: "history", name: "Audit history", icon: History },
+  { id: "credentials", name: "Credentials", icon: KeyRound },
+  { id: "settings", name: "Settings", icon: Settings2 },
+];
+function Shell() {
+  const workspace = useWorkspace();
+  const [view, setView] = useState(
+    () => localStorage.getItem("lighthouse-view") || "overview",
+  );
+  const [compact, setCompact] = useState(
+    () => localStorage.getItem("lighthouse-compact") === "true",
+  );
+  const [theme, setTheme] = useState<Theme>(savedTheme);
+  const [systemDark, setSystemDark] = useState(
+    () => matchMedia("(prefers-color-scheme: dark)").matches,
+  );
+  const [dismissedProgress, setDismissedProgress] = useState("");
   useEffect(() => {
-    loadData();
-  }, []);
-
-  const handleDataChange = () => {
-    loadData();
+    const media = matchMedia("(prefers-color-scheme: dark)");
+    const update = () => {
+      setSystemDark(media.matches);
+      applyTheme(theme, media.matches);
+    };
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, [theme]);
+  const preferencesLoaded = useRef(false);
+  useEffect(() => {
+    if (!workspace.settings?.desktop || preferencesLoaded.current) return;
+    preferencesLoaded.current = true;
+    setTheme(workspace.settings.appearance);
+    setCompact(workspace.settings.sidebarCompact);
+    setView(workspace.settings.activeView);
+  }, [workspace.settings]);
+  const persist = (preferences: Partial<UiPreferences>) => {
+    if (workspace.settings?.desktop)
+      void workspace.savePreferences(preferences);
   };
-
+  const changeTheme = (next: Theme) => {
+    setTheme(next);
+    persist({ appearance: next });
+  };
+  const navigate = (next: string) => {
+    setView(next);
+    persist({ activeView: next });
+    localStorage.setItem("lighthouse-view", next);
+  };
+  const isDark = theme === "dark" || (theme === "system" && systemDark);
+  const progressKey = JSON.stringify(workspace.status.urls);
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-green-500 rounded-lg flex items-center justify-center">
-                <BarChart3 className="w-5 h-5 text-white" />
-              </div>
-              <h1 className="text-xl font-semibold text-gray-900">
-                Lighthouse Dashboard
-              </h1>
-              <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
-                serverOnline 
-                  ? 'bg-green-100 text-green-700' 
-                  : 'bg-red-100 text-red-700'
-              }`}>
-                {serverOnline ? 'Connected' : 'Offline'}
-              </span>
-            </div>
-
-            <nav className="flex gap-1">
-              <button
-                onClick={() => setActiveTab('dashboard')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
-                  activeTab === 'dashboard'
-                    ? 'bg-blue-100 text-blue-700'
-                    : 'text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                <BarChart3 className="w-4 h-4" />
-                Dashboard
-              </button>
-              <button
-                onClick={() => setActiveTab('modules')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
-                  activeTab === 'modules'
-                    ? 'bg-blue-100 text-blue-700'
-                    : 'text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                <LayoutGrid className="w-4 h-4" />
-                Modules
-              </button>
-              <button
-                onClick={() => setActiveTab('credentials')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
-                  activeTab === 'credentials'
-                    ? 'bg-purple-100 text-purple-700'
-                    : 'text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                <Key className="w-4 h-4" />
-                Credentials
-                {credentials.length > 0 && (
-                  <span className="px-1.5 py-0.5 text-xs bg-purple-200 text-purple-700 rounded-full">
-                    {credentials.length}
-                  </span>
-                )}
-              </button>
-            </nav>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {!serverOnline && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <p className="text-red-800 font-medium">Server Not Running</p>
-              <p className="text-red-700 text-sm mt-1">
-                Start the server with: <code className="bg-red-100 px-2 py-0.5 rounded">cd server && npm run dev</code>
-              </p>
-            </div>
+    <div className={`app-shell ${compact ? "compact" : ""}`}>
+      <a className="skip-link" href="#main">
+        Skip to workspace
+      </a>
+      <aside className="sidebar">
+        <a
+          href="#"
+          className="brand"
+          onClick={(e) => {
+            e.preventDefault();
+            navigate("overview");
+          }}
+        >
+          <img src="/lighthouse.svg" alt="" />
+          <span>Auditbench</span>
+        </a>
+        <div className="workspace-label">PERSONAL WORKSPACE</div>
+        <nav aria-label="Workspace">
+          {views.map(({ id, name, icon: Icon }) => (
             <button
-              onClick={loadData}
-              className="px-3 py-1 bg-red-100 text-red-700 rounded-lg text-sm font-medium hover:bg-red-200 flex items-center gap-1"
+              key={id}
+              onClick={() => navigate(id)}
+              className={view === id ? "active" : ""}
+              aria-current={view === id ? "page" : undefined}
+              title={name}
             >
-              <RefreshCw className="w-4 h-4" />
-              Retry
+              <Icon size={18} />
+              <span>{name}</span>
+              {id === "modules" && <small>{workspace.modules.length}</small>}
+            </button>
+          ))}
+        </nav>
+        <div className="sidebar-bottom">
+          <div className="local-note">
+            <Activity size={17} />
+            <span>
+              Local by design<small>Your data stays on this device.</small>
+            </span>
+          </div>
+          <a href="https://axvrma.com" target="_blank" rel="noreferrer">
+            Abhishek Verma
+          </a>
+          <button
+            className="collapse-button"
+            aria-label={compact ? "Expand sidebar" : "Compact sidebar"}
+            onClick={() => {
+              setCompact(!compact);
+              persist({ sidebarCompact: !compact });
+              localStorage.setItem("lighthouse-compact", String(!compact));
+            }}
+          >
+            {compact ? (
+              <PanelLeftOpen size={18} />
+            ) : (
+              <PanelLeftClose size={18} />
+            )}
+            <span>Collapse sidebar</span>
+          </button>
+        </div>
+      </aside>
+      <div className="workspace">
+        <header className="topbar">
+          <div className="breadcrumb">
+            Workspace <span>/</span>{" "}
+            <strong>
+              {views.find((v) => v.id === view)?.name || "Overview"}
+            </strong>
+          </div>
+          <div className="toolbar">
+            <span className={`engine ${workspace.error ? "poor" : ""}`}>
+              <i />
+              {workspace.error
+                ? "Needs attention"
+                : workspace.status.inProgress
+                  ? "Engine auditing"
+                  : "Engine ready"}
+            </span>
+            <span className="version">
+              v{workspace.settings?.version || "…"}
+            </span>
+            <button
+              className="icon-button"
+              title="Refresh workspace"
+              aria-label="Refresh workspace"
+              onClick={() => void workspace.refresh()}
+            >
+              <RefreshCw size={17} />
+            </button>
+            <button
+              className="icon-button"
+              aria-label="Toggle color theme"
+              title="Toggle color theme"
+              onClick={() => changeTheme(isDark ? "light" : "dark")}
+            >
+              {isDark ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
+            <button
+              className="primary"
+              disabled={
+                workspace.status.inProgress ||
+                !workspace.urls.some((u) => u.is_active)
+              }
+              onClick={() => void workspace.start()}
+            >
+              <Play size={14} />
+              {workspace.status.inProgress ? "Auditing…" : "Run all audits"}
             </button>
           </div>
-        )}
-
-        {error && serverOnline && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
-            {error}
+        </header>
+        <main id="main" tabIndex={-1}>
+          <div className="page-heading">
+            <div>
+              <p className="eyebrow">PERFORMANCE INTELLIGENCE</p>
+              <h1>
+                {view === "overview"
+                  ? "A clearer view of your web."
+                  : views.find((v) => v.id === view)?.name}
+              </h1>
+              <p className="muted">
+                {view === "overview"
+                  ? "Understand your performance. Track what changed. Know what to fix."
+                  : "A focused workspace. Everything stored on your device."}
+              </p>
+            </div>
+            <span className="workspace-badge">LOCAL WORKSPACE</span>
           </div>
-        )}
-
-        {loading && modules.length === 0 ? (
-          <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          </div>
-        ) : activeTab === 'dashboard' ? (
-          <Dashboard 
-            modules={modules}
-            urls={urls} 
-            audits={audits} 
-            onRefresh={loadData}
-          />
-        ) : activeTab === 'modules' ? (
-          <ModuleManager 
-            modules={modules}
-            urls={urls}
-            credentials={credentials}
-            onDataChange={handleDataChange}
-          />
-        ) : (
-          <CredentialManager
-            credentials={credentials}
-            onRefresh={handleDataChange}
-          />
-        )}
-      </main>
+          {workspace.error && (
+            <div className="error" role="alert">
+              {workspace.error}{" "}
+              <button onClick={() => void workspace.refresh()}>
+                Retry connection
+              </button>
+            </div>
+          )}
+          {workspace.settings?.migrationNotice && (
+            <div className="banner" role="status">
+              {workspace.settings.migrationNotice}
+            </div>
+          )}
+          {workspace.status.total > 0 &&
+            (workspace.status.inProgress ||
+              dismissedProgress !== progressKey) && (
+              <section
+                className="audit-progress"
+                aria-label="Audit progress"
+                aria-live="polite"
+              >
+                <div className="row">
+                  <strong>
+                    {workspace.status.inProgress
+                      ? "Audit in progress"
+                      : "Last batch finished"}
+                  </strong>
+                  <span className="inline">
+                    <span className="mono">
+                      {workspace.status.completed} / {workspace.status.total}{" "}
+                      processed
+                    </span>
+                    {!workspace.status.inProgress && (
+                      <button
+                        className="icon-button"
+                        aria-label="Dismiss completed audit progress"
+                        onClick={() => setDismissedProgress(progressKey)}
+                      >
+                        <X size={15} />
+                      </button>
+                    )}
+                  </span>
+                </div>
+                <progress
+                  value={workspace.status.completed}
+                  max={workspace.status.total}
+                />
+                <div className="progress-urls">
+                  {workspace.status.urls.map((u) => (
+                    <span
+                      key={u.id}
+                      className={u.status === "failed" ? "poor" : ""}
+                      title={u.error || u.url}
+                    >
+                      {u.name} · {u.status}
+                    </span>
+                  ))}
+                </div>
+              </section>
+            )}
+          {workspace.loading ? (
+            <div className="skeleton" aria-label="Loading workspace" />
+          ) : (
+            <Suspense fallback={<div className="skeleton" />}>
+              {view === "overview" ? (
+                <Dashboard onManage={() => navigate("modules")} />
+              ) : view === "modules" ? (
+                <ModuleManager />
+              ) : view === "credentials" ? (
+                <CredentialManager />
+              ) : view === "history" ? (
+                <AuditHistory />
+              ) : (
+                <Settings theme={theme} setTheme={changeTheme} />
+              )}
+            </Suspense>
+          )}
+          <footer className="app-footer">
+            <span>Auditbench · Local-first performance intelligence</span>
+            <a href="https://axvrma.com" target="_blank" rel="noreferrer">
+              Abhishek Verma
+            </a>
+          </footer>
+        </main>
+      </div>
+      {workspace.notice && (
+        <div className="toast" role="status">
+          {workspace.notice}
+        </div>
+      )}
     </div>
   );
 }
-
-export default App;
+export default function App() {
+  return (
+    <WorkspaceProvider>
+      <Shell />
+    </WorkspaceProvider>
+  );
+}
