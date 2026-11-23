@@ -1,6 +1,6 @@
 # Desktop release process
 
-The release target is Auditbench 2.0.0 (`v2.0.0`). The root package version, tag and packaged application version must match.
+The current published release is [Auditbench 2.0.0](https://github.com/axvrma/auditbench/releases/tag/v2.0.0) (`v2.0.0`). The root package version, tag and packaged application version must match.
 
 ## Commands
 

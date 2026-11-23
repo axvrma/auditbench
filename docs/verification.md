@@ -49,9 +49,9 @@ The standard `npm start` command is tested with the opt-in smoke flag and an iso
 
 ## Limits and remaining work
 
-- Native Windows x64, Linux x64 and macOS Intel runtime/install/upgrade checks were not available on this host. Their existing native CI matrix remains configured; no successful remote workflow run is claimed.
+- Interactive Windows x64, Linux x64 and macOS Intel runtime/install/upgrade checks were not performed on the local host. The 2.0.0 release subsequently passed native CI typechecking, all 17 tests and packaging on all four target runners; see the release verification below.
 - The macOS artifact is ad-hoc signed, not Developer ID signed or notarized. Windows signing is not configured. Keychain prompts can recur for unsigned/ad-hoc builds, and an unavailable store requires unlocking it and restarting before using saved authentication.
-- No public release, version tag, repository push or Netlify deployment was performed. Netlify configuration/output were tested locally; custom domains and production deployment require the existing integration.
+- Auditbench 2.0.0 was published through the native GitHub Actions matrix after the original local modernization checks. Landing-page changes are pushed to main. Netlify configuration/output were tested locally; a Netlify hosting deployment was not independently confirmed from this environment.
 - The final dependency audit reports **38 advisories: 27 moderate and 11 high; no critical findings**. The baseline was 49, including two critical findings. Remaining chains include the pinned Lighthouse/Sentry/OpenTelemetry, Puppeteer/browser tooling, Vite/esbuild and builder tooling. No forced major upgrade was applied without compatibility verification. Passing functional checks is not a clean security audit.
 - Login automation is a conservative form-based flow; MFA, captchas and arbitrary SSO/sessionStorage flows are not guaranteed.
 - The history workspace loads the latest 10,000 records, with an explicit notice for larger databases. Charts display up to 1,000 observed runs. Overall counts and per-site latest-score averages query the complete database; older history remains stored.
@@ -61,3 +61,9 @@ The standard `npm start` command is tested with the opt-in smoke flag and an iso
 The app, website, wordmark, social image, author metadata, native menus and installer naming now use Auditbench and the linked author credit Abhishek Verma. Product screenshots were regenerated from real audits using the renamed interface. A clean `npm ci` and `npm ls --depth=0` verified the renamed workspace packages without stale links; the 17-test suite passed again, including both legacy and Auditbench asset filenames. The renamed desktop passed workspace/API/session checks and preference restoration across launches. The legacy profile directory, application ID and pre-ready OS key-store name remain stable; the visible Electron name becomes Auditbench on ready. No repository rename or public release was performed.
 
 The rebuilt `release/Auditbench-1.1.0-mac-arm64.dmg` and `Auditbench.app` passed the packaged two-launch smoke after the clean install. Bundle metadata confirms the visible name Auditbench and the unchanged application ID `com.axvrma.lighthouse-agent`.
+
+## Auditbench 2.0.0 publication
+
+[Auditbench 2.0.0](https://github.com/axvrma/auditbench/releases/tag/v2.0.0) is public and marked as the latest stable release. [GitHub Actions run 45128831958](https://github.com/axvrma/auditbench/actions/runs/45128831958) passed the Windows x64, Linux x64, macOS arm64 and macOS x64 package jobs and the publication job. The Intel Mac build succeeded after retrying a transient Electron-header connection timeout. The release tag remains on commit 8ee2dae.
+
+All five uploaded assets returned HTTP 200 without authentication: the two Mac DMGs, Windows NSIS EXE, Windows portable ZIP and Linux x86_64 AppImage. The actual landing-page download resolver was executed against the public latest-release API and resolved all four platform cards to v2.0.0, preferring the Windows installer when both Windows formats are available. The canonical repository is axvrma/auditbench. Browser/mobile checks, fallback behavior and the local marketing Lighthouse scores (97/100/100/100) passed again for the release links.
